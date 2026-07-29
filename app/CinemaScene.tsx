@@ -1076,8 +1076,8 @@ function Seats({
         <primitive object={cushionGeometry} attach="geometry" />
         <meshLambertMaterial
           vertexColors
-          emissive="#320011"
-          emissiveIntensity={0.06}
+          emissive="#7a1236"
+          emissiveIntensity={0.35}
         />
       </instancedMesh>
       <instancedMesh
@@ -1091,8 +1091,8 @@ function Seats({
         <primitive object={backGeometry} attach="geometry" />
         <meshLambertMaterial
           vertexColors
-          emissive="#28000e"
-          emissiveIntensity={0.05}
+          emissive="#65102e"
+          emissiveIntensity={0.3}
         />
       </instancedMesh>
       <instancedMesh
@@ -1106,8 +1106,8 @@ function Seats({
         <primitive object={backGeometry} attach="geometry" />
         <meshLambertMaterial
           vertexColors
-          emissive="#320011"
-          emissiveIntensity={0.06}
+          emissive="#7a1236"
+          emissiveIntensity={0.35}
         />
       </instancedMesh>
       <instancedMesh
@@ -1117,8 +1117,8 @@ function Seats({
         <primitive object={sidePanelGeometry} attach="geometry" />
         <meshLambertMaterial
           vertexColors
-          emissive="#28000e"
-          emissiveIntensity={0.05}
+          emissive="#65102e"
+          emissiveIntensity={0.3}
         />
       </instancedMesh>
       <instancedMesh
