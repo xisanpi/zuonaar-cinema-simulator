@@ -1076,13 +1076,13 @@ function Seats({
         <primitive object={cushionGeometry} attach="geometry" />
         <meshPhysicalMaterial
           vertexColors
-          roughness={0.76}
+          roughness={0.96}
           metalness={0}
-          emissive="#25000e"
-          emissiveIntensity={0.16}
-          sheen={0.58}
-          sheenColor="#c43d61"
-          sheenRoughness={0.78}
+          specularIntensity={0.06}
+          specularColor="#4b1f2d"
+          sheen={0.12}
+          sheenColor="#71152e"
+          sheenRoughness={1}
         />
       </instancedMesh>
       <instancedMesh
@@ -1096,13 +1096,13 @@ function Seats({
         <primitive object={backGeometry} attach="geometry" />
         <meshPhysicalMaterial
           vertexColors
-          roughness={0.78}
+          roughness={0.92}
           metalness={0}
-          emissive="#21000c"
-          emissiveIntensity={0.14}
-          sheen={0.34}
-          sheenColor="#8d2945"
-          sheenRoughness={0.86}
+          specularIntensity={0.08}
+          specularColor="#411923"
+          sheen={0.04}
+          sheenColor="#5f1026"
+          sheenRoughness={1}
         />
       </instancedMesh>
       <instancedMesh
@@ -1116,13 +1116,13 @@ function Seats({
         <primitive object={backGeometry} attach="geometry" />
         <meshPhysicalMaterial
           vertexColors
-          roughness={0.78}
+          roughness={0.96}
           metalness={0}
-          emissive="#25000e"
-          emissiveIntensity={0.16}
-          sheen={0.62}
-          sheenColor="#c43d61"
-          sheenRoughness={0.76}
+          specularIntensity={0.06}
+          specularColor="#4b1f2d"
+          sheen={0.14}
+          sheenColor="#71152e"
+          sheenRoughness={1}
         />
       </instancedMesh>
       <instancedMesh
@@ -1132,13 +1132,13 @@ function Seats({
         <primitive object={sidePanelGeometry} attach="geometry" />
         <meshPhysicalMaterial
           vertexColors
-          roughness={0.84}
+          roughness={0.95}
           metalness={0}
-          emissive="#21000c"
-          emissiveIntensity={0.13}
-          sheen={0.3}
-          sheenColor="#84233e"
-          sheenRoughness={0.86}
+          specularIntensity={0.05}
+          specularColor="#411923"
+          sheen={0.08}
+          sheenColor="#651129"
+          sheenRoughness={1}
         />
       </instancedMesh>
       <instancedMesh
