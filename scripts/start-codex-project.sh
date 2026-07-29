@@ -5,7 +5,7 @@ project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$project_dir"
 
 port="3000"
-health_url="http://127.0.0.1:${port}/"
+health_url="http://localhost:${port}/"
 
 if curl --silent --fail --max-time 2 "$health_url" >/dev/null 2>&1; then
   echo "项目已经在 ${health_url} 运行。"
@@ -26,4 +26,3 @@ trap cleanup EXIT INT TERM
 npm run dev &
 child_pid="$!"
 wait "$child_pid"
-
