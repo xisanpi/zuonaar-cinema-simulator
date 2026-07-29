@@ -1,0 +1,405 @@
+"use client";
+
+import dynamic from "next/dynamic";
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  Eye,
+  FilmSlate,
+  MapTrifold,
+  Moon,
+  Pause,
+  Play,
+  SunDim,
+} from "@phosphor-icons/react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  auditoriums,
+  buildSeats,
+  cinemas,
+  getSeatMetrics,
+  type Seat,
+} from "./cinema-data";
+
+const CinemaScene = dynamic(
+  () => import("./CinemaScene").then((module) => module.CinemaScene),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="scene-loading" role="status" aria-live="polite">
+        <div className="scene-loading-screen" />
+        <span>正在搭建影厅</span>
+      </div>
+    ),
+  },
+);
+
+type ViewMode = "overview" | "seat";
+
+type ViewCommand = {
+  yaw: number;
+  pitch: number;
+  token: number;
+};
+
+function getDefaultSeatId(auditoriumId: string) {
+  const auditorium =
+    auditoriums.find((item) => item.id === auditoriumId) ?? auditoriums[0];
+  const seats = buildSeats(auditorium);
+  return (
+    seats.find(
+      (seat) =>
+        seat.row === 6 &&
+        seat.number === Math.ceil(auditorium.rowSeatCounts[6] / 2),
+    ) ?? seats[0]
+  ).id;
+}
+
+export function CinemaExperience() {
+  const [auditoriumId, setAuditoriumId] = useState(auditoriums[0].id);
+  const [selectedSeatId, setSelectedSeatId] = useState(() =>
+    getDefaultSeatId(auditoriums[0].id),
+  );
+  const [viewMode, setViewMode] = useState<ViewMode>("overview");
+  const [filmMode, setFilmMode] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [viewCommand, setViewCommand] = useState<ViewCommand>({
+    yaw: 0,
+    pitch: 0,
+    token: 0,
+  });
+  const [isMobile, setIsMobile] = useState(false);
+
+  const auditorium =
+    auditoriums.find((item) => item.id === auditoriumId) ?? auditoriums[0];
+  const cinema =
+    cinemas.find((item) => item.id === auditorium.cinemaId) ?? cinemas[0];
+  const seats = useMemo(() => buildSeats(auditorium), [auditorium]);
+  const selectedSeat =
+    seats.find((seat) => seat.id === selectedSeatId) ??
+    seats.find(
+      (seat) =>
+        seat.row === 6 &&
+        seat.number === Math.ceil(auditorium.rowSeatCounts[6] / 2),
+    ) ??
+    seats[0];
+  const metrics = getSeatMetrics(auditorium, selectedSeat);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobile(mediaQuery.matches);
+    update();
+    mediaQuery.addEventListener("change", update);
+    return () => mediaQuery.removeEventListener("change", update);
+  }, []);
+
+  const switchAuditorium = (nextAuditoriumId: string) => {
+    setAuditoriumId(nextAuditoriumId);
+    setSelectedSeatId(getDefaultSeatId(nextAuditoriumId));
+    setViewMode("overview");
+  };
+
+  const selectCinema = (cinemaId: string) => {
+    const nextAuditorium = auditoriums.find(
+      (item) => item.cinemaId === cinemaId,
+    );
+    if (nextAuditorium) switchAuditorium(nextAuditorium.id);
+  };
+
+  const selectSeat = (seat: Seat) => {
+    if (seat.status === "occupied") return;
+    setSelectedSeatId(seat.id);
+    if (isMobile) setViewMode("seat");
+  };
+
+  const toggleFilmMode = () => {
+    setFilmMode((current) => {
+      const next = !current;
+      setPlaying(next);
+      return next;
+    });
+  };
+
+  const nudgeView = (yaw: number, pitch: number) => {
+    setViewCommand((current) => ({
+      yaw,
+      pitch,
+      token: current.token + 1,
+    }));
+  };
+
+  return (
+    <main className="cinema-app">
+      <header className="topbar">
+        <a className="brand" href="#" aria-label="坐哪儿首页">
+          <span className="brand-mark">
+            <FilmSlate size={22} weight="fill" />
+          </span>
+          <span>
+            <strong>坐哪儿</strong>
+            <small>影院视野模拟器</small>
+          </span>
+        </a>
+
+        <div className="venue-controls" aria-label="影院选择">
+          <label className="select-field">
+            <span>影院</span>
+            <select
+              value={cinema.id}
+              onChange={(event) => selectCinema(event.target.value)}
+            >
+              {cinemas.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.city} · {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="select-field">
+            <span>影厅</span>
+            <select
+              value={auditorium.id}
+              onChange={(event) => switchAuditorium(event.target.value)}
+            >
+              {auditoriums
+                .filter((item) => item.cinemaId === cinema.id)
+                .map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} · {item.format}
+                  </option>
+                ))}
+            </select>
+          </label>
+        </div>
+
+        <button
+          className={`projection-toggle ${filmMode ? "is-active" : ""}`}
+          type="button"
+          onClick={toggleFilmMode}
+          aria-pressed={filmMode}
+        >
+          {filmMode ? <Moon size={19} /> : <SunDim size={19} />}
+          <span>{filmMode ? "放映中" : "散场灯光"}</span>
+        </button>
+      </header>
+
+      <section className="experience-layout">
+        <div className="scene-shell">
+          <CinemaScene
+            auditorium={auditorium}
+            seats={seats}
+            selectedSeat={selectedSeat}
+            viewMode={viewMode}
+            filmMode={filmMode}
+            playing={playing}
+            viewCommand={viewCommand}
+            isMobile={isMobile}
+            onSelectSeat={selectSeat}
+          />
+
+          <div className="scene-status" aria-live="polite">
+            <span>{cinema.name}</span>
+            <strong>
+              {selectedSeat.rowLabel} 排 {selectedSeat.number} 座
+            </strong>
+          </div>
+
+          <div className="view-switcher" aria-label="视角">
+            <button
+              className={viewMode === "overview" ? "is-active" : ""}
+              type="button"
+              onClick={() => setViewMode("overview")}
+              aria-pressed={viewMode === "overview"}
+            >
+              <MapTrifold size={18} />
+              全厅
+            </button>
+            <button
+              className={viewMode === "seat" ? "is-active" : ""}
+              type="button"
+              onClick={() => setViewMode("seat")}
+              aria-pressed={viewMode === "seat"}
+            >
+              <Eye size={18} />
+              座位
+            </button>
+          </div>
+
+          <div className="scene-controls">
+            <div className="direction-pad" aria-label="调整视线">
+              <span />
+              <button
+                type="button"
+                aria-label="视线向上"
+                onClick={() => nudgeView(0, 0.08)}
+              >
+                <ArrowUp size={17} />
+              </button>
+              <span />
+              <button
+                type="button"
+                aria-label="视线向左"
+                onClick={() => nudgeView(0.09, 0)}
+              >
+                <ArrowLeft size={17} />
+              </button>
+              <button
+                type="button"
+                aria-label="视线向下"
+                onClick={() => nudgeView(0, -0.08)}
+              >
+                <ArrowDown size={17} />
+              </button>
+              <button
+                type="button"
+                aria-label="视线向右"
+                onClick={() => nudgeView(-0.09, 0)}
+              >
+                <ArrowRight size={17} />
+              </button>
+            </div>
+
+            <button
+              className="play-control"
+              type="button"
+              onClick={() => {
+                if (!filmMode) setFilmMode(true);
+                setPlaying((current) => !current);
+              }}
+              aria-pressed={playing}
+            >
+              {playing ? (
+                <Pause size={20} weight="fill" />
+              ) : (
+                <Play size={20} weight="fill" />
+              )}
+              <span>{playing ? "暂停短片" : "播放短片"}</span>
+            </button>
+          </div>
+
+          <p className="gesture-hint">
+            拖动观察影厅
+            {viewMode === "seat" ? "，视点固定在当前座位" : ""}
+          </p>
+        </div>
+
+        <aside className="seat-panel" aria-label="选座与体验指标">
+          <div className="auditorium-heading">
+            <div>
+              <span>{cinema.city}</span>
+              <h1>{auditorium.name}</h1>
+            </div>
+            <strong>{auditorium.format}</strong>
+          </div>
+
+          <section className="technical-summary" aria-label="影厅技术数据">
+            <div>
+              <span>银幕数据</span>
+              <strong>
+                {auditorium.screenWidth.toFixed(1)} ×{" "}
+                {auditorium.screenHeight.toFixed(1)} m
+              </strong>
+              <small>
+                {(auditorium.screenWidth * auditorium.screenHeight).toFixed(0)}
+                ㎡ · {auditorium.screenAspect}
+              </small>
+            </div>
+            <div>
+              <span>放映技术</span>
+              <strong>{auditorium.projectionTechnology}</strong>
+              <small>{auditorium.projectionDetails.join(" / ")}</small>
+            </div>
+          </section>
+
+          <div className="screen-key">
+            <span>银幕</span>
+            <small>{auditorium.screenAspect}</small>
+          </div>
+
+          <div className="seat-map" role="group" aria-label="座位图">
+            {Array.from({ length: auditorium.rowCount }, (_, row) => {
+              const rowSeats = seats.filter((seat) => seat.row === row);
+              return (
+                <div className="seat-row" key={row}>
+                  <span className="row-label">{rowSeats[0]?.rowLabel}</span>
+                  <div className="seat-row-buttons">
+                    {rowSeats.map((seat, index) => (
+                      <button
+                        type="button"
+                        key={seat.id}
+                        className={[
+                          "seat-button",
+                          seat.id === selectedSeat.id ? "is-selected" : "",
+                          seat.status === "occupied" ? "is-occupied" : "",
+                          index === rowSeats.length / 2 ? "after-aisle" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        onClick={() => selectSeat(seat)}
+                        disabled={seat.status === "occupied"}
+                        aria-label={`${seat.rowLabel} 排 ${seat.number} 座${
+                          seat.status === "occupied" ? "，不可选" : ""
+                        }`}
+                        aria-pressed={seat.id === selectedSeat.id}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="seat-legend" aria-label="图例">
+            <span>
+              <i className="legend-available" /> 可选
+            </span>
+            <span>
+              <i className="legend-selected" /> 当前
+            </span>
+            <span>
+              <i className="legend-occupied" /> 不可选
+            </span>
+          </div>
+
+          <section className="seat-reading">
+            <div className="reading-title">
+              <span>
+                {selectedSeat.rowLabel} 排 {selectedSeat.number} 座
+              </span>
+              <strong>{metrics.verdict}</strong>
+            </div>
+            <p>{metrics.note}</p>
+            <dl>
+              <div>
+                <dt>水平视角</dt>
+                <dd>{metrics.horizontalFov.toFixed(0)}°</dd>
+              </div>
+              <div>
+                <dt>仰角</dt>
+                <dd>{metrics.verticalAngle.toFixed(0)}°</dd>
+              </div>
+              <div>
+                <dt>距银幕</dt>
+                <dd>{metrics.distance.toFixed(1)} m</dd>
+              </div>
+            </dl>
+            <button
+              className="enter-seat-button"
+              type="button"
+              onClick={() => setViewMode("seat")}
+            >
+              从这里看
+              <Eye size={18} />
+            </button>
+          </section>
+
+          <p className="data-note">
+            模型说明：{auditorium.sourceNote}。指标为几何估算。
+          </p>
+        </aside>
+      </section>
+    </main>
+  );
+}
