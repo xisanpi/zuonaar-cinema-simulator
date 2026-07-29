@@ -7,17 +7,20 @@ import { Canvas, type ThreeEvent, useFrame, useThree } from "@react-three/fiber"
 import {
   Color,
   Euler,
+  ExtrudeGeometry,
   InstancedMesh,
   Matrix4,
   Object3D,
   PerspectiveCamera,
   PlaneGeometry,
   Quaternion,
+  Shape,
   ShaderMaterial,
   SRGBColorSpace,
   Vector3,
   VideoTexture,
 } from "three";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import {
   Suspense,
   useEffect,
@@ -160,6 +163,32 @@ function createCurvedScreenGeometry(
   position.needsUpdate = true;
   geometry.computeVertexNormals();
   geometry.computeBoundingSphere();
+  return geometry;
+}
+
+function createCinemaSeatBackGeometry() {
+  const shape = new Shape();
+  shape.moveTo(-0.34, -0.58);
+  shape.quadraticCurveTo(-0.43, -0.52, -0.44, -0.36);
+  shape.quadraticCurveTo(-0.46, 0.1, -0.48, 0.4);
+  shape.quadraticCurveTo(-0.47, 0.56, -0.32, 0.61);
+  shape.quadraticCurveTo(0, 0.68, 0.32, 0.61);
+  shape.quadraticCurveTo(0.47, 0.56, 0.48, 0.4);
+  shape.quadraticCurveTo(0.46, 0.1, 0.44, -0.36);
+  shape.quadraticCurveTo(0.43, -0.52, 0.34, -0.58);
+  shape.quadraticCurveTo(0, -0.63, -0.34, -0.58);
+
+  const geometry = new ExtrudeGeometry(shape, {
+    depth: 0.22,
+    steps: 1,
+    curveSegments: 8,
+    bevelEnabled: true,
+    bevelSegments: 2,
+    bevelSize: 0.045,
+    bevelThickness: 0.035,
+  });
+  geometry.center();
+  geometry.computeVertexNormals();
   return geometry;
 }
 
@@ -667,45 +696,176 @@ function Seats({
 >) {
   const cushionRef = useRef<InstancedMesh>(null);
   const backRef = useRef<InstancedMesh>(null);
+  const backShellRef = useRef<InstancedMesh>(null);
+  const sidePanelRef = useRef<InstancedMesh>(null);
+  const armCapRef = useRef<InstancedMesh>(null);
+  const cupHolderRef = useRef<InstancedMesh>(null);
+  const legRef = useRef<InstancedMesh>(null);
+  const footRef = useRef<InstancedMesh>(null);
   const [hoveredSeatId, setHoveredSeatId] = useState<string | null>(null);
   const matrix = useMemo(() => new Matrix4(), []);
   const seatObject = useMemo(() => new Object3D(), []);
+  const cushionGeometry = useMemo(
+    () => new RoundedBoxGeometry(0.98, 0.34, 0.9, 3, 0.15),
+    [],
+  );
+  const backGeometry = useMemo(
+    () => createCinemaSeatBackGeometry(),
+    [],
+  );
+  const sidePanelGeometry = useMemo(
+    () => new RoundedBoxGeometry(0.2, 0.68, 0.72, 3, 0.08),
+    [],
+  );
+  const armCapGeometry = useMemo(
+    () => new RoundedBoxGeometry(0.22, 0.1, 0.72, 3, 0.045),
+    [],
+  );
   const seatColors = useMemo(
     () => ({
-      available: new Color("#9a3036"),
-      selected: new Color("#e25a52"),
-      occupied: new Color("#26272a"),
-      hovered: new Color("#b93b40"),
+      available: {
+        upholstery: new Color("#c62b3d"),
+        shell: new Color("#b12535"),
+        panel: new Color("#a62231"),
+      },
+      selected: {
+        upholstery: new Color("#d85049"),
+        shell: new Color("#ad3936"),
+        panel: new Color("#a63233"),
+      },
+      occupied: {
+        upholstery: new Color("#5c1820"),
+        shell: new Color("#51131b"),
+        panel: new Color("#4b1118"),
+      },
+      hovered: {
+        upholstery: new Color("#b6323a"),
+        shell: new Color("#962831"),
+        panel: new Color("#8a222a"),
+      },
     }),
     [],
   );
 
   useLayoutEffect(() => {
-    if (!cushionRef.current || !backRef.current) return;
+    if (
+      !cushionRef.current ||
+      !backRef.current ||
+      !backShellRef.current ||
+      !sidePanelRef.current ||
+      !armCapRef.current ||
+      !cupHolderRef.current ||
+      !legRef.current ||
+      !footRef.current
+    ) {
+      return;
+    }
+
+    const placePart = (
+      mesh: InstancedMesh,
+      instanceIndex: number,
+      position: [number, number, number],
+      rotation: [number, number, number],
+      scale: [number, number, number],
+    ) => {
+      seatObject.position.set(...position);
+      seatObject.rotation.set(...rotation);
+      seatObject.scale.set(...scale);
+      seatObject.updateMatrix();
+      matrix.copy(seatObject.matrix);
+      mesh.setMatrixAt(instanceIndex, matrix);
+    };
 
     seats.forEach((seat, index) => {
-      seatObject.position.set(seat.x, seat.y, seat.z);
-      seatObject.rotation.set(-0.08, 0, 0);
-      seatObject.updateMatrix();
-      matrix.copy(seatObject.matrix);
-      cushionRef.current?.setMatrixAt(index, matrix);
+      placePart(
+        cushionRef.current!,
+        index,
+        [seat.x, seat.y + 0.06, seat.z - 0.02],
+        [-0.08, 0, 0],
+        [1, 1, 1],
+      );
+      placePart(
+        backShellRef.current!,
+        index,
+        [seat.x, seat.y + 0.69, seat.z + 0.42],
+        [-0.1, 0, 0],
+        [1.045, 1.045, 1.18],
+      );
+      placePart(
+        backRef.current!,
+        index,
+        [seat.x, seat.y + 0.69, seat.z + 0.31],
+        [-0.1, 0, 0],
+        [1, 1, 1],
+      );
 
-      seatObject.position.set(seat.x, seat.y + 0.67, seat.z + 0.32);
-      seatObject.rotation.set(-0.08, 0, 0);
-      seatObject.updateMatrix();
-      matrix.copy(seatObject.matrix);
-      backRef.current?.setMatrixAt(index, matrix);
+      [-0.55, 0.55].forEach((xOffset, sideIndex) => {
+        placePart(
+          sidePanelRef.current!,
+          index * 2 + sideIndex,
+          [seat.x + xOffset, seat.y + 0.12, seat.z + 0.12],
+          [-0.055, 0, 0],
+          [1, 1, 1],
+        );
+        placePart(
+          armCapRef.current!,
+          index * 2 + sideIndex,
+          [seat.x + xOffset, seat.y + 0.49, seat.z + 0.05],
+          [-0.055, 0, 0],
+          [1, 1, 1],
+        );
+        placePart(
+          legRef.current!,
+          index * 2 + sideIndex,
+          [seat.x + xOffset * 0.72, seat.y - 0.44, seat.z + 0.2],
+          [0, 0, 0],
+          [1, 1, 1],
+        );
+        placePart(
+          footRef.current!,
+          index * 2 + sideIndex,
+          [seat.x + xOffset * 0.72, seat.y - 0.79, seat.z + 0.14],
+          [0, 0, 0],
+          [1, 1, 1],
+        );
+      });
+
+      placePart(
+        cupHolderRef.current!,
+        index,
+        [seat.x + 0.55, seat.y + 0.55, seat.z - 0.27],
+        [Math.PI / 2, 0, 0],
+        [1, 1, 1],
+      );
     });
 
-    cushionRef.current.instanceMatrix.needsUpdate = true;
-    backRef.current.instanceMatrix.needsUpdate = true;
+    [
+      cushionRef.current,
+      backRef.current,
+      backShellRef.current,
+      sidePanelRef.current,
+      armCapRef.current,
+      cupHolderRef.current,
+      legRef.current,
+      footRef.current,
+    ].forEach((mesh) => {
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.computeBoundingSphere();
+    });
   }, [matrix, seatObject, seats]);
 
   useLayoutEffect(() => {
-    if (!cushionRef.current || !backRef.current) return;
+    if (
+      !cushionRef.current ||
+      !backRef.current ||
+      !backShellRef.current ||
+      !sidePanelRef.current
+    ) {
+      return;
+    }
 
     seats.forEach((seat, index) => {
-      const color =
+      const colors =
         seat.id === selectedSeat.id
           ? seatColors.selected
           : seat.id === hoveredSeatId
@@ -713,16 +873,21 @@ function Seats({
             : seat.status === "occupied"
               ? seatColors.occupied
               : seatColors.available;
-      cushionRef.current?.setColorAt(index, color);
-      backRef.current?.setColorAt(index, color);
+      cushionRef.current?.setColorAt(index, colors.upholstery);
+      backRef.current?.setColorAt(index, colors.upholstery);
+      backShellRef.current?.setColorAt(index, colors.shell);
+      sidePanelRef.current?.setColorAt(index * 2, colors.panel);
+      sidePanelRef.current?.setColorAt(index * 2 + 1, colors.panel);
     });
 
-    if (cushionRef.current.instanceColor) {
-      cushionRef.current.instanceColor.needsUpdate = true;
-    }
-    if (backRef.current.instanceColor) {
-      backRef.current.instanceColor.needsUpdate = true;
-    }
+    [
+      cushionRef.current,
+      backRef.current,
+      backShellRef.current,
+      sidePanelRef.current,
+    ].forEach((mesh) => {
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    });
   }, [hoveredSeatId, seatColors, seats, selectedSeat.id]);
 
   const getSeatFromEvent = (event: ThreeEvent<PointerEvent>) => {
@@ -752,11 +917,36 @@ function Seats({
         onPointerMove={handlePointerMove}
         onPointerOut={() => setHoveredSeatId(null)}
       >
-        <boxGeometry args={[0.98, 0.34, 0.9]} />
-        <meshStandardMaterial
+        <primitive object={cushionGeometry} attach="geometry" />
+        <meshPhysicalMaterial
           vertexColors
-          roughness={0.94}
-          metalness={0.01}
+          roughness={0.8}
+          metalness={0}
+          emissive="#430008"
+          emissiveIntensity={0.28}
+          sheen={0.45}
+          sheenColor="#5a1019"
+          sheenRoughness={0.86}
+        />
+      </instancedMesh>
+      <instancedMesh
+        ref={backShellRef}
+        args={[undefined, undefined, seats.length]}
+        castShadow={!filmMode}
+        onClick={handleClick}
+        onPointerMove={handlePointerMove}
+        onPointerOut={() => setHoveredSeatId(null)}
+      >
+        <primitive object={backGeometry} attach="geometry" />
+        <meshPhysicalMaterial
+          vertexColors
+          roughness={0.74}
+          metalness={0}
+          emissive="#400007"
+          emissiveIntensity={0.28}
+          sheen={0.4}
+          sheenColor="#3c0c12"
+          sheenRoughness={0.9}
         />
       </instancedMesh>
       <instancedMesh
@@ -767,11 +957,72 @@ function Seats({
         onPointerMove={handlePointerMove}
         onPointerOut={() => setHoveredSeatId(null)}
       >
-        <boxGeometry args={[0.98, 1.18, 0.27]} />
-        <meshStandardMaterial
+        <primitive object={backGeometry} attach="geometry" />
+        <meshPhysicalMaterial
           vertexColors
-          roughness={0.96}
+          roughness={0.82}
+          metalness={0}
+          emissive="#430008"
+          emissiveIntensity={0.28}
+          sheen={0.5}
+          sheenColor="#5a1019"
+          sheenRoughness={0.84}
+        />
+      </instancedMesh>
+      <instancedMesh
+        ref={sidePanelRef}
+        args={[undefined, undefined, seats.length * 2]}
+      >
+        <primitive object={sidePanelGeometry} attach="geometry" />
+        <meshPhysicalMaterial
+          vertexColors
+          roughness={0.84}
+          metalness={0}
+          emissive="#400007"
+          emissiveIntensity={0.26}
+          sheen={0.34}
+          sheenColor="#4f0e17"
+          sheenRoughness={0.88}
+        />
+      </instancedMesh>
+      <instancedMesh
+        ref={armCapRef}
+        args={[undefined, undefined, seats.length * 2]}
+      >
+        <primitive object={armCapGeometry} attach="geometry" />
+        <meshStandardMaterial
+          color="#09090b"
+          roughness={0.86}
           metalness={0.01}
+        />
+      </instancedMesh>
+      <instancedMesh
+        ref={cupHolderRef}
+        args={[undefined, undefined, seats.length]}
+      >
+        <torusGeometry args={[0.08, 0.025, 6, 12]} />
+        <meshBasicMaterial color="#050506" toneMapped={false} />
+      </instancedMesh>
+      <instancedMesh
+        ref={legRef}
+        args={[undefined, undefined, seats.length * 2]}
+      >
+        <boxGeometry args={[0.1, 0.68, 0.13]} />
+        <meshStandardMaterial
+          color="#111216"
+          roughness={0.56}
+          metalness={0.48}
+        />
+      </instancedMesh>
+      <instancedMesh
+        ref={footRef}
+        args={[undefined, undefined, seats.length * 2]}
+      >
+        <boxGeometry args={[0.28, 0.055, 0.44]} />
+        <meshStandardMaterial
+          color="#101115"
+          roughness={0.5}
+          metalness={0.52}
         />
       </instancedMesh>
     </group>
