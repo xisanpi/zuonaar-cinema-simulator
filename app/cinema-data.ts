@@ -14,6 +14,7 @@ export type Seat = {
   rowLabel: string;
   number: number;
   x: number;
+  /** Finished floor elevation for this seating row. */
   y: number;
   z: number;
   status: SeatStatus;
@@ -157,15 +158,29 @@ const occupiedSeatIds = new Set([
   "hall-0019-H-18",
 ]);
 
+export const cinemaSeatGeometry = {
+  rowFloorBaseY: 0.4,
+  centerGap: 0.9,
+  centerSpacing: 0.82,
+  cushionCenterAboveFloor: 0.37,
+  cushionTopAboveFloor: 0.46,
+  backCenterAboveFloor: 0.76,
+  armrestAboveFloor: 0.65,
+  seatedEyeHeightAboveCushion: 0.765,
+} as const;
+
 export function buildSeats(auditorium: Auditorium): Seat[] {
   return auditorium.rowSeatCounts.flatMap((count, row) => {
     const rowLabel = String.fromCharCode(65 + row);
-    const centerGap = 1.05;
-    const seatSpacing = 1.18;
 
     return Array.from({ length: count }, (_, index) => {
-      const sideOffset = index < count / 2 ? -centerGap / 2 : centerGap / 2;
-      const x = (index - (count - 1) / 2) * seatSpacing + sideOffset;
+      const sideOffset =
+        index < count / 2
+          ? -cinemaSeatGeometry.centerGap / 2
+          : cinemaSeatGeometry.centerGap / 2;
+      const x =
+        (index - (count - 1) / 2) * cinemaSeatGeometry.centerSpacing +
+        sideOffset;
       const id = `${auditorium.id}-${rowLabel}-${index + 1}`;
 
       return {
@@ -174,7 +189,9 @@ export function buildSeats(auditorium: Auditorium): Seat[] {
         rowLabel,
         number: index + 1,
         x,
-        y: 0.95 + row * auditorium.rowRise,
+        y:
+          cinemaSeatGeometry.rowFloorBaseY +
+          row * auditorium.rowRise,
         z: auditorium.firstRowZ + row * auditorium.rowSpacing,
         status: occupiedSeatIds.has(id) ? "occupied" : "available",
       };
@@ -182,12 +199,12 @@ export function buildSeats(auditorium: Auditorium): Seat[] {
   });
 }
 
-const seatCushionTopOffsetY = 0.23;
-export const seatedEyeHeightAboveCushion = 0.78;
-
 export function getSeatEyeY(seat: Seat) {
-  const cushionTopY = seat.y + seatCushionTopOffsetY;
-  return cushionTopY + seatedEyeHeightAboveCushion;
+  return (
+    seat.y +
+    cinemaSeatGeometry.cushionTopAboveFloor +
+    cinemaSeatGeometry.seatedEyeHeightAboveCushion
+  );
 }
 
 export function getSeatMetrics(auditorium: Auditorium, seat: Seat) {

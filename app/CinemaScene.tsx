@@ -36,6 +36,7 @@ import {
   useState,
 } from "react";
 import {
+  cinemaSeatGeometry,
   getSeatEyeY,
   type Auditorium,
   type FilmSource,
@@ -785,7 +786,8 @@ function AuditoriumArchitecture({
       </mesh>
 
       {Array.from({ length: auditorium.rowCount }, (_, row) => {
-        const y = 0.4 + row * auditorium.rowRise;
+        const y =
+          cinemaSeatGeometry.rowFloorBaseY + row * auditorium.rowRise;
         const z = auditorium.firstRowZ + row * auditorium.rowSpacing;
         return (
           <mesh key={row} position={[0, y - 0.37, z + 0.1]} receiveShadow>
@@ -867,7 +869,7 @@ function Seats({
   const matrix = useMemo(() => new Matrix4(), []);
   const seatObject = useMemo(() => new Object3D(), []);
   const cushionGeometry = useMemo(
-    () => new RoundedBoxGeometry(0.98, 0.34, 0.9, 3, 0.15),
+    () => new RoundedBoxGeometry(0.58, 0.18, 0.54, 3, 0.08),
     [],
   );
   const backGeometry = useMemo(
@@ -875,11 +877,11 @@ function Seats({
     [],
   );
   const sidePanelGeometry = useMemo(
-    () => new RoundedBoxGeometry(0.2, 0.68, 0.72, 3, 0.08),
+    () => new RoundedBoxGeometry(0.12, 0.56, 0.63, 3, 0.05),
     [],
   );
   const armCapGeometry = useMemo(
-    () => new RoundedBoxGeometry(0.22, 0.1, 0.72, 3, 0.045),
+    () => new RoundedBoxGeometry(0.14, 0.08, 0.62, 3, 0.035),
     [],
   );
   const seatColors = useMemo(
@@ -941,51 +943,67 @@ function Seats({
       placePart(
         cushionRef.current!,
         index,
-        [seat.x, seat.y + 0.06, seat.z - 0.02],
+        [
+          seat.x,
+          seat.y + cinemaSeatGeometry.cushionCenterAboveFloor,
+          seat.z - 0.03,
+        ],
         [-0.08, 0, 0],
         [1, 1, 1],
       );
       placePart(
         backShellRef.current!,
         index,
-        [seat.x, seat.y + 0.69, seat.z + 0.42],
+        [
+          seat.x,
+          seat.y + cinemaSeatGeometry.backCenterAboveFloor,
+          seat.z + 0.32,
+        ],
         [-0.1, 0, 0],
-        [1.045, 1.045, 1.18],
+        [0.71, 0.57, 1.02],
       );
       placePart(
         backRef.current!,
         index,
-        [seat.x, seat.y + 0.69, seat.z + 0.31],
+        [
+          seat.x,
+          seat.y + cinemaSeatGeometry.backCenterAboveFloor,
+          seat.z + 0.23,
+        ],
         [-0.1, 0, 0],
-        [1, 1, 1],
+        [0.68, 0.54, 0.9],
       );
 
-      [-0.55, 0.55].forEach((xOffset, sideIndex) => {
+      [-0.35, 0.35].forEach((xOffset, sideIndex) => {
         placePart(
           sidePanelRef.current!,
           index * 2 + sideIndex,
-          [seat.x + xOffset, seat.y + 0.12, seat.z + 0.12],
+          [seat.x + xOffset, seat.y + 0.34, seat.z + 0.06],
           [-0.055, 0, 0],
           [1, 1, 1],
         );
         placePart(
           armCapRef.current!,
           index * 2 + sideIndex,
-          [seat.x + xOffset, seat.y + 0.49, seat.z + 0.05],
+          [
+            seat.x + xOffset,
+            seat.y + cinemaSeatGeometry.armrestAboveFloor,
+            seat.z + 0.05,
+          ],
           [-0.055, 0, 0],
           [1, 1, 1],
         );
         placePart(
           legRef.current!,
           index * 2 + sideIndex,
-          [seat.x + xOffset * 0.72, seat.y - 0.44, seat.z + 0.2],
+          [seat.x + xOffset * 0.72, seat.y + 0.2, seat.z + 0.16],
           [0, 0, 0],
           [1, 1, 1],
         );
         placePart(
           footRef.current!,
           index * 2 + sideIndex,
-          [seat.x + xOffset * 0.72, seat.y - 0.79, seat.z + 0.14],
+          [seat.x + xOffset * 0.72, seat.y + 0.03, seat.z + 0.12],
           [0, 0, 0],
           [1, 1, 1],
         );
@@ -994,7 +1012,11 @@ function Seats({
       placePart(
         cupHolderRef.current!,
         index,
-        [seat.x + 0.55, seat.y + 0.55, seat.z - 0.27],
+        [
+          seat.x + 0.35,
+          seat.y + cinemaSeatGeometry.armrestAboveFloor + 0.015,
+          seat.z - 0.2,
+        ],
         [Math.PI / 2, 0, 0],
         [1, 1, 1],
       );
@@ -1169,14 +1191,14 @@ function Seats({
         ref={cupHolderRef}
         args={[undefined, undefined, seats.length]}
       >
-        <torusGeometry args={[0.08, 0.025, 6, 12]} />
+        <torusGeometry args={[0.055, 0.018, 6, 12]} />
         <meshBasicMaterial color="#050506" toneMapped={false} />
       </instancedMesh>
       <instancedMesh
         ref={legRef}
         args={[undefined, undefined, seats.length * 2]}
       >
-        <boxGeometry args={[0.1, 0.68, 0.13]} />
+        <boxGeometry args={[0.08, 0.36, 0.1]} />
         <meshStandardMaterial
           color="#111216"
           roughness={0.56}
@@ -1187,7 +1209,7 @@ function Seats({
         ref={footRef}
         args={[undefined, undefined, seats.length * 2]}
       >
-        <boxGeometry args={[0.28, 0.055, 0.44]} />
+        <boxGeometry args={[0.22, 0.04, 0.32]} />
         <meshStandardMaterial
           color="#101115"
           roughness={0.5}
