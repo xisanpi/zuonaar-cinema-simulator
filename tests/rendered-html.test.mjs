@@ -51,10 +51,21 @@ test("server-renders a selected auditorium simulator", async () => {
   assert.match(html, /幕面光学模型/);
   assert.match(html, /IMAX Laser Countdown（在线）/);
   assert.match(html, /H 排 12 座/);
+  assert.match(html, /估算座位排列/);
+  assert.match(html, /当前没有实际选座图，按登记容量生成/);
   assert.match(html, /返回/);
   assert.doesNotMatch(html, /自由视角/);
   assert.doesNotMatch(html, /从这里看/);
   assert.doesNotMatch(html, />全厅</);
+});
+
+test("labels captured seat layouts explicitly", async () => {
+  const response = await render("/cinema/hall-0010");
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  assert.match(html, /真实座位排列/);
+  assert.match(html, /逐排座号、空槽与过道来自实际选座页面/);
 });
 
 test("unknown auditoriums return not found", async () => {

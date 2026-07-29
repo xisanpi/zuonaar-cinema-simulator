@@ -337,6 +337,31 @@ export function CinemaExperience({
             <small>{auditorium.screenAspect}</small>
           </div>
 
+          <div
+            className="seat-layout-source"
+            aria-label={`座位排列来源：${
+              auditorium.seatLayout ? "真实选座图" : "模型估算"
+            }`}
+          >
+            <span className="seat-layout-source-copy">
+              <strong>座位排列</strong>
+              <small>
+                {auditorium.seatLayout
+                  ? "逐排座号、空槽与过道来自实际选座页面"
+                  : "当前没有实际选座图，按登记容量生成"}
+              </small>
+            </span>
+            <span
+              className={`seat-layout-source-tag ${
+                auditorium.seatLayout ? "is-captured" : "is-estimated"
+              }`}
+              data-dbd-component="tag"
+              role="status"
+            >
+              {auditorium.seatLayout ? "真实座位排列" : "估算座位排列"}
+            </span>
+          </div>
+
           <div className="seat-map" role="group" aria-label="座位图">
             {Array.from({ length: auditorium.rowCount }, (_, row) => {
               const rowSeats = seats.filter((seat) => seat.row === row);

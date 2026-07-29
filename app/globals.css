@@ -13,6 +13,10 @@
   --accent: #d04b43;
   --accent-strong: #e45b53;
   --accent-dark: #7b2626;
+  --support-success-text: #55e170;
+  --support-success-bg: #415841;
+  --support-warning-text: #ffad2b;
+  --support-warning-bg: #5c4f3d;
   --radius-panel: 14px;
   --radius-control: 10px;
   --radius-tag: 4px;
@@ -552,6 +556,57 @@ button {
 .screen-key small {
   color: var(--subtle);
   font-family: var(--font-geist-mono), monospace;
+}
+
+.seat-layout-source {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface-raised);
+}
+
+.seat-layout-source-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.seat-layout-source-copy strong {
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 550;
+}
+
+.seat-layout-source-copy small {
+  color: var(--subtle);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.seat-layout-source-tag {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-tag);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.seat-layout-source-tag.is-captured {
+  color: var(--support-success-text);
+  background: var(--support-success-bg);
+}
+
+.seat-layout-source-tag.is-estimated {
+  color: var(--support-warning-text);
+  background: var(--support-warning-bg);
 }
 
 .seat-map {
