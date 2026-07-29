@@ -20,6 +20,7 @@ import {
   buildSeats,
   cinemas,
   getSeatMetrics,
+  type FilmSource,
   type Seat,
 } from "./cinema-data";
 
@@ -65,6 +66,7 @@ export function CinemaExperience() {
   const [viewMode, setViewMode] = useState<ViewMode>("seat");
   const [filmMode, setFilmMode] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [filmSource, setFilmSource] = useState<FilmSource>("local-demo");
   const [viewCommand, setViewCommand] = useState<ViewCommand>({
     yaw: 0,
     pitch: 0,
@@ -194,6 +196,7 @@ export function CinemaExperience() {
             viewMode={viewMode}
             filmMode={filmMode}
             playing={playing}
+            filmSource={filmSource}
             viewCommand={viewCommand}
             isMobile={isMobile}
             onSelectSeat={selectSeat}
@@ -261,6 +264,34 @@ export function CinemaExperience() {
               </button>
             </div>
 
+            <div className="film-picker">
+              <label htmlFor="film-source">影片</label>
+              <select
+                id="film-source"
+                aria-label="影片"
+                value={filmSource}
+                onChange={(event) => {
+                  setFilmSource(event.target.value as FilmSource);
+                  setPlaying(false);
+                  setFilmMode(false);
+                }}
+              >
+                <option value="local-demo">自然演示片</option>
+                <option value="imax-countdown">
+                  IMAX Laser Countdown（在线）
+                </option>
+              </select>
+              {filmSource === "imax-countdown" && (
+                <a
+                  href="https://www.youtube.com/watch?v=n5HbQ7vCvDY"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  IMAX 官方原片 ↗
+                </a>
+              )}
+            </div>
+
             <button
               className="play-control"
               type="button"
@@ -275,7 +306,13 @@ export function CinemaExperience() {
               ) : (
                 <Play size={20} weight="fill" />
               )}
-              <span>{playing ? "暂停短片" : "播放短片"}</span>
+              <span>
+                {playing
+                  ? "暂停"
+                  : filmSource === "imax-countdown"
+                    ? "播放倒计时"
+                    : "播放短片"}
+              </span>
             </button>
           </div>
 

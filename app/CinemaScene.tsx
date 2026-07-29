@@ -26,7 +26,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { Auditorium, Seat } from "./cinema-data";
+import type { Auditorium, FilmSource, Seat } from "./cinema-data";
 
 type ViewMode = "overview" | "seat";
 
@@ -43,12 +43,19 @@ type CinemaSceneProps = {
   viewMode: ViewMode;
   filmMode: boolean;
   playing: boolean;
+  filmSource: FilmSource;
   viewCommand: ViewCommand;
   isMobile: boolean;
   onSelectSeat: (seat: Seat) => void;
 };
 
 const upVector = new Vector3(0, 1, 0);
+const countdownPreviewId = "666393527";
+const countdownPreviewEmbed = `https://player.vimeo.com/video/${countdownPreviewId}?autoplay=1&muted=1&background=1&loop=1&autopause=0&dnt=1`;
+const countdownPreviewWidth = 1440;
+const countdownPreviewHeight = 1080;
+const countdownPreviewAspect =
+  countdownPreviewWidth / countdownPreviewHeight;
 const silverScreenVertexShader = `
   varying vec2 vUv;
   varying vec3 vWorldNormal;
@@ -154,6 +161,132 @@ function createCurvedScreenGeometry(
   geometry.computeVertexNormals();
   geometry.computeBoundingSphere();
   return geometry;
+}
+
+type ScreenPoint = { x: number; y: number };
+
+function quadTransform(
+  [topLeft, topRight, bottomRight, bottomLeft]: [
+    ScreenPoint,
+    ScreenPoint,
+    ScreenPoint,
+    ScreenPoint,
+  ],
+  width: number,
+  height: number,
+) {
+  const dx1 = topRight.x - bottomRight.x;
+  const dy1 = topRight.y - bottomRight.y;
+  const dx2 = bottomLeft.x - bottomRight.x;
+  const dy2 = bottomLeft.y - bottomRight.y;
+  const dx3 =
+    topLeft.x - topRight.x + bottomRight.x - bottomLeft.x;
+  const dy3 =
+    topLeft.y - topRight.y + bottomRight.y - bottomLeft.y;
+  const denominator = dx1 * dy2 - dx2 * dy1;
+
+  if (Math.abs(denominator) < 0.0001) return null;
+
+  const perspectiveX = (dx3 * dy2 - dx2 * dy3) / denominator;
+  const perspectiveY = (dx1 * dy3 - dx3 * dy1) / denominator;
+  const scaleX =
+    topRight.x - topLeft.x + perspectiveX * topRight.x;
+  const skewY =
+    topRight.y - topLeft.y + perspectiveX * topRight.y;
+  const skewX =
+    bottomLeft.x - topLeft.x + perspectiveY * bottomLeft.x;
+  const scaleY =
+    bottomLeft.y - topLeft.y + perspectiveY * bottomLeft.y;
+
+  return `matrix3d(
+    ${scaleX / width}, ${skewY / width}, 0, ${perspectiveX / width},
+    ${skewX / height}, ${scaleY / height}, 0, ${perspectiveY / height},
+    0, 0, 1, 0,
+    ${topLeft.x}, ${topLeft.y}, 0, 1
+  )`;
+}
+
+function OnlineVideoTracker({
+  auditorium,
+  active,
+  overlayRef,
+}: Pick<CinemaSceneProps, "auditorium"> & {
+  active: boolean;
+  overlayRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const videoHeight = Math.min(
+    auditorium.screenHeight - 0.6,
+    (auditorium.screenWidth - 0.45) / countdownPreviewAspect,
+  );
+  const videoWidth = videoHeight * countdownPreviewAspect;
+  const corners = useMemo(
+    () => [
+      new Vector3(),
+      new Vector3(),
+      new Vector3(),
+      new Vector3(),
+    ],
+    [],
+  );
+
+  useFrame(({ camera, size }) => {
+    const overlay = overlayRef.current;
+    if (!overlay) return;
+
+    if (!active) {
+      overlay.style.visibility = "hidden";
+      return;
+    }
+
+    const centerY =
+      auditorium.screenBottom + auditorium.screenHeight / 2;
+    const edgeZ =
+      auditorium.screenZ +
+      0.09 +
+      auditorium.screenSurface.curvatureDepth;
+    const halfWidth = videoWidth / 2;
+    const halfHeight = videoHeight / 2;
+
+    corners[0].set(-halfWidth, centerY + halfHeight, edgeZ);
+    corners[1].set(halfWidth, centerY + halfHeight, edgeZ);
+    corners[2].set(halfWidth, centerY - halfHeight, edgeZ);
+    corners[3].set(-halfWidth, centerY - halfHeight, edgeZ);
+
+    const projected = corners.map((corner) => {
+      corner.project(camera);
+      return {
+        x: (corner.x * 0.5 + 0.5) * size.width,
+        y: (-corner.y * 0.5 + 0.5) * size.height,
+        z: corner.z,
+      };
+    });
+
+    if (projected.some((point) => point.z < -1 || point.z > 1)) {
+      overlay.style.visibility = "hidden";
+      return;
+    }
+
+    const transform = quadTransform(
+      [
+        projected[0],
+        projected[1],
+        projected[2],
+        projected[3],
+      ],
+      countdownPreviewWidth,
+      countdownPreviewHeight,
+    );
+
+    if (!transform) {
+      overlay.style.visibility = "hidden";
+      return;
+    }
+
+    overlay.style.visibility = "visible";
+    overlay.style.transform = transform;
+  });
+
+  return null;
 }
 
 function CameraRig({
@@ -400,7 +533,11 @@ function Screen({
   auditorium,
   filmMode,
   playing,
-}: Pick<CinemaSceneProps, "auditorium" | "filmMode" | "playing">) {
+  filmSource,
+}: Pick<
+  CinemaSceneProps,
+  "auditorium" | "filmMode" | "playing" | "filmSource"
+>) {
   const centerY = auditorium.screenBottom + auditorium.screenHeight / 2;
 
   return (
@@ -416,7 +553,7 @@ function Screen({
       <SilverScreenSurface auditorium={auditorium} dimmed={filmMode} />
       <VideoSurface
         auditorium={auditorium}
-        active={filmMode && playing}
+        active={filmMode && playing && filmSource === "local-demo"}
         playing={playing}
       />
       {filmMode && (
@@ -693,6 +830,7 @@ function SceneContents(props: CinemaSceneProps) {
         auditorium={auditorium}
         filmMode={filmMode}
         playing={props.playing}
+        filmSource={props.filmSource}
       />
       <AuditoriumArchitecture
         auditorium={auditorium}
@@ -715,6 +853,11 @@ function SceneContents(props: CinemaSceneProps) {
 }
 
 export function CinemaScene(props: CinemaSceneProps) {
+  const onlineOverlayRef = useRef<HTMLDivElement>(null);
+  const onlineVideoActive =
+    props.filmMode &&
+    props.playing &&
+    props.filmSource === "imax-countdown";
   const initialCameraPosition: [number, number, number] =
     props.viewMode === "seat"
       ? [
@@ -725,28 +868,49 @@ export function CinemaScene(props: CinemaSceneProps) {
       : [0, 11.5, 15.5];
 
   return (
-    <Canvas
-      className="cinema-canvas"
-      dpr={props.isMobile ? [1, 1.35] : [1, 1.75]}
-      camera={{
-        position: initialCameraPosition,
-        fov: props.viewMode === "seat" ? 66 : 50,
-        near: 0.1,
-        far: 120,
-      }}
-      gl={{
-        antialias: !props.isMobile,
-        alpha: false,
-        powerPreference: "high-performance",
-      }}
-      shadows={!props.isMobile && !props.filmMode}
-      onCreated={({ gl }) => {
-        gl.toneMappingExposure = 1.28;
-      }}
-    >
-      <Suspense fallback={null}>
-        <SceneContents {...props} />
-      </Suspense>
-    </Canvas>
+    <>
+      <Canvas
+        className="cinema-canvas"
+        dpr={props.isMobile ? [1, 1.35] : [1, 1.75]}
+        camera={{
+          position: initialCameraPosition,
+          fov: props.viewMode === "seat" ? 66 : 50,
+          near: 0.1,
+          far: 120,
+        }}
+        gl={{
+          antialias: !props.isMobile,
+          alpha: false,
+          powerPreference: "high-performance",
+        }}
+        shadows={!props.isMobile && !props.filmMode}
+        onCreated={({ gl }) => {
+          gl.toneMappingExposure = 1.28;
+        }}
+      >
+        <Suspense fallback={null}>
+          <SceneContents {...props} />
+          <OnlineVideoTracker
+            auditorium={props.auditorium}
+            active={onlineVideoActive}
+            overlayRef={onlineOverlayRef}
+          />
+        </Suspense>
+      </Canvas>
+      <div
+        ref={onlineOverlayRef}
+        className="online-video-overlay"
+        aria-hidden={!onlineVideoActive}
+      >
+        {onlineVideoActive && (
+          <iframe
+            src={countdownPreviewEmbed}
+            title="IMAX Laser Countdown 在线预览"
+            allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+        )}
+      </div>
+    </>
   );
 }

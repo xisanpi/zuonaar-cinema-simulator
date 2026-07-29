@@ -1,4 +1,5 @@
 export type SeatStatus = "available" | "occupied";
+export type FilmSource = "local-demo" | "imax-countdown";
 
 export type Seat = {
   id: string;

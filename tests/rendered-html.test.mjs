@@ -33,6 +33,7 @@ test("server-renders the cinema simulator shell", async () => {
   assert.match(html, /中国电影博物馆/);
   assert.match(html, /自由视角/);
   assert.match(html, /幕面光学模型/);
+  assert.match(html, /IMAX Laser Countdown（在线）/);
   assert.match(html, /从这里看/);
   assert.doesNotMatch(html, />全厅</);
   assert.doesNotMatch(html, /codex-preview/);
