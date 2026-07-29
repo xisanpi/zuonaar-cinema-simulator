@@ -959,7 +959,7 @@ function Seats({
           seat.y + cinemaSeatGeometry.backCenterAboveFloor,
           seat.z + 0.32,
         ],
-        [-0.1, 0, 0],
+        [cinemaSeatGeometry.backrestReclineRadians, 0, 0],
         [0.71, 0.57, 1.02],
       );
       placePart(
@@ -970,7 +970,7 @@ function Seats({
           seat.y + cinemaSeatGeometry.backCenterAboveFloor,
           seat.z + 0.23,
         ],
-        [-0.1, 0, 0],
+        [cinemaSeatGeometry.backrestReclineRadians, 0, 0],
         [0.68, 0.54, 0.9],
       );
 

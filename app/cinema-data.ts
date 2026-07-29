@@ -165,6 +165,7 @@ export const cinemaSeatGeometry = {
   cushionCenterAboveFloor: 0.37,
   cushionTopAboveFloor: 0.46,
   backCenterAboveFloor: 0.76,
+  backrestReclineRadians: (16 * Math.PI) / 180,
   armrestAboveFloor: 0.65,
   seatedEyeHeightAboveCushion: 0.765,
 } as const;
