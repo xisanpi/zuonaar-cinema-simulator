@@ -880,24 +880,24 @@ function Seats({
   const seatColors = useMemo(
     () => ({
       available: {
-        upholstery: new Color("#94183b"),
-        shell: new Color("#74132f"),
-        panel: new Color("#611027"),
+        upholstery: new Color("#b52b52"),
+        shell: new Color("#8f1e3e"),
+        panel: new Color("#781832"),
       },
       selected: {
-        upholstery: new Color("#c63b5c"),
-        shell: new Color("#922341"),
-        panel: new Color("#7b1b36"),
+        upholstery: new Color("#df5274"),
+        shell: new Color("#ad3152"),
+        panel: new Color("#922542"),
       },
       occupied: {
-        upholstery: new Color("#470c20"),
-        shell: new Color("#360817"),
-        panel: new Color("#2e0613"),
+        upholstery: new Color("#65162f"),
+        shell: new Color("#4f1025"),
+        panel: new Color("#420c1e"),
       },
       hovered: {
-        upholstery: new Color("#ab2449"),
-        shell: new Color("#801b38"),
-        panel: new Color("#6c162f"),
+        upholstery: new Color("#c63a60"),
+        shell: new Color("#9d2948"),
+        panel: new Color("#86203b"),
       },
     }),
     [],
@@ -1078,6 +1078,8 @@ function Seats({
           vertexColors
           roughness={0.96}
           metalness={0}
+          emissive="#300011"
+          emissiveIntensity={0.04}
           specularIntensity={0.06}
           specularColor="#4b1f2d"
           sheen={0.12}
@@ -1098,6 +1100,8 @@ function Seats({
           vertexColors
           roughness={0.92}
           metalness={0}
+          emissive="#28000e"
+          emissiveIntensity={0.035}
           specularIntensity={0.08}
           specularColor="#411923"
           sheen={0.04}
@@ -1118,6 +1122,8 @@ function Seats({
           vertexColors
           roughness={0.96}
           metalness={0}
+          emissive="#300011"
+          emissiveIntensity={0.04}
           specularIntensity={0.06}
           specularColor="#4b1f2d"
           sheen={0.14}
@@ -1134,6 +1140,8 @@ function Seats({
           vertexColors
           roughness={0.95}
           metalness={0}
+          emissive="#28000e"
+          emissiveIntensity={0.03}
           specularIntensity={0.05}
           specularColor="#411923"
           sheen={0.08}
