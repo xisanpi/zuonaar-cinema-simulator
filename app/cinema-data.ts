@@ -4,6 +4,7 @@ import {
   inventoryHalls,
   type InventoryHall,
 } from "./cinema-inventory";
+import seatLayoutsJson from "./seat-layouts.json";
 
 export type SeatStatus = "available" | "occupied";
 export type FilmSource = "local-demo" | "imax-countdown";
@@ -12,13 +13,33 @@ export type Seat = {
   id: string;
   row: number;
   rowLabel: string;
-  number: number;
+  number: string;
+  gridSlot: number;
   x: number;
   /** Finished floor elevation for this seating row. */
   y: number;
   z: number;
   status: SeatStatus;
 };
+
+type CapturedSeatLayout = {
+  gridColumns: number;
+  physicalSeats: number;
+  inventorySeats: number | null;
+  countMatchesInventory: boolean;
+  hallName: string;
+  capturedAt: string;
+  sourceUrl: string;
+  rows: Array<{
+    label: string;
+    cells: Array<[seat: string, slot: number]>;
+  }>;
+};
+
+const capturedSeatLayouts = seatLayoutsJson.layouts as Record<
+  string,
+  CapturedSeatLayout
+>;
 
 export type Auditorium = {
   id: string;
@@ -45,6 +66,8 @@ export type Auditorium = {
   rowRise: number;
   firstRowZ: number;
   rowSeatCounts: number[];
+  seatingWidth: number;
+  seatLayout: CapturedSeatLayout | null;
   sourceNote: string;
 };
 
@@ -56,6 +79,18 @@ export type Cinema = {
   latitude: number | null;
   longitude: number | null;
 };
+
+export const cinemaSeatGeometry = {
+  rowFloorBaseY: 0.4,
+  centerGap: 0.9,
+  centerSpacing: 0.82,
+  cushionCenterAboveFloor: 0.37,
+  cushionTopAboveFloor: 0.46,
+  backCenterAboveFloor: 0.76,
+  backrestReclineRadians: (16 * Math.PI) / 180,
+  armrestAboveFloor: 0.65,
+  seatedEyeHeightAboveCushion: 0.765,
+} as const;
 
 function approximateRows(hall: InventoryHall) {
   const screenWidth = hall.width ?? 18;
@@ -102,7 +137,20 @@ function hallToAuditorium(hall: InventoryHall): Auditorium {
       ? screenWidth /
         Math.max(Number.parseFloat(hall.ratio.split(":")[0]), 1.43)
       : screenWidth / 1.9);
-  const rowSeatCounts = approximateRows(hall);
+  const seatLayout = capturedSeatLayouts[hall.id] ?? null;
+  const rowSeatCounts =
+    seatLayout?.rows.map((row) => row.cells.length) ?? approximateRows(hall);
+  const seatingColumns =
+    seatLayout?.gridColumns ?? Math.max(...rowSeatCounts, 1);
+  const seatingWidth =
+    seatingColumns * cinemaSeatGeometry.centerSpacing +
+    (seatLayout ? 0 : cinemaSeatGeometry.centerGap);
+  const capturedCountNote =
+    seatLayout && !seatLayout.countMatchesInventory
+      ? `；当前选座图为 ${seatLayout.physicalSeats} 座，与登记容量 ${
+          seatLayout.inventorySeats ?? "待补"
+        } 座存在版本或统计口径差异`
+      : "";
 
   return {
     id: hall.id,
@@ -129,8 +177,11 @@ function hallToAuditorium(hall: InventoryHall): Auditorium {
     rowRise: 0.48,
     firstRowZ: -3.8,
     rowSeatCounts,
-    sourceNote:
-      "银幕规格、放映制式与容量来自公开数据库；座位几何为容量近似，不代表影院官方测绘",
+    seatingWidth,
+    seatLayout,
+    sourceNote: seatLayout
+      ? `银幕规格与放映制式来自公开数据库；逐排座号和空槽来自猫眼选座网格抓取${capturedCountNote}；座间距、排距和高差仍为几何估算`
+      : "银幕规格、放映制式与容量来自公开数据库；该厅尚无逐排抓取数据，座位排列按容量近似，不代表影院官方测绘",
   };
 }
 
@@ -158,19 +209,33 @@ const occupiedSeatIds = new Set([
   "hall-0019-H-18",
 ]);
 
-export const cinemaSeatGeometry = {
-  rowFloorBaseY: 0.4,
-  centerGap: 0.9,
-  centerSpacing: 0.82,
-  cushionCenterAboveFloor: 0.37,
-  cushionTopAboveFloor: 0.46,
-  backCenterAboveFloor: 0.76,
-  backrestReclineRadians: (16 * Math.PI) / 180,
-  armrestAboveFloor: 0.65,
-  seatedEyeHeightAboveCushion: 0.765,
-} as const;
-
 export function buildSeats(auditorium: Auditorium): Seat[] {
+  if (auditorium.seatLayout) {
+    const centerSlot = (auditorium.seatLayout.gridColumns + 1) / 2;
+
+    return auditorium.seatLayout.rows.flatMap((layoutRow, row) =>
+      layoutRow.cells.map(([seatNumber, gridSlot]) => {
+        const id = `${auditorium.id}-${layoutRow.label}-${seatNumber}`;
+
+        return {
+          id,
+          row,
+          rowLabel: layoutRow.label,
+          number: seatNumber,
+          gridSlot,
+          x:
+            (gridSlot - centerSlot) *
+            cinemaSeatGeometry.centerSpacing,
+          y:
+            cinemaSeatGeometry.rowFloorBaseY +
+            row * auditorium.rowRise,
+          z: auditorium.firstRowZ + row * auditorium.rowSpacing,
+          status: "available",
+        };
+      }),
+    );
+  }
+
   return auditorium.rowSeatCounts.flatMap((count, row) => {
     const rowLabel = String.fromCharCode(65 + row);
 
@@ -188,7 +253,8 @@ export function buildSeats(auditorium: Auditorium): Seat[] {
         id,
         row,
         rowLabel,
-        number: index + 1,
+        number: String(index + 1),
+        gridSlot: index + 1,
         x,
         y:
           cinemaSeatGeometry.rowFloorBaseY +

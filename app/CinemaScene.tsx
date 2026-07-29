@@ -781,6 +781,11 @@ function AuditoriumArchitecture({
     15,
     auditorium.screenBottom + auditorium.screenHeight + 2.2,
   );
+  const roomWidth = Math.max(34, auditorium.seatingWidth + 5);
+  const halfRoomWidth = roomWidth / 2;
+  const platformWidth = roomWidth - 5;
+  const aisleLightX = Math.max(14.5, halfRoomWidth - 2.5);
+  const acousticPanelX = halfRoomWidth - 1.4;
 
   useEffect(
     () => () => aisleLightMaterial.dispose(),
@@ -796,7 +801,7 @@ function AuditoriumArchitecture({
   return (
     <group>
       <mesh position={[0, -0.5, roomCenterZ]} receiveShadow>
-        <boxGeometry args={[34, 1, roomDepth]} />
+        <boxGeometry args={[roomWidth, 1, roomDepth]} />
         <meshStandardMaterial color="#191b1f" roughness={0.95} />
       </mesh>
 
@@ -806,33 +811,41 @@ function AuditoriumArchitecture({
         const z = auditorium.firstRowZ + row * auditorium.rowSpacing;
         return (
           <mesh key={row} position={[0, y - 0.37, z + 0.1]} receiveShadow>
-            <boxGeometry args={[29, 0.72, auditorium.rowSpacing + 0.08]} />
+            <boxGeometry
+              args={[platformWidth, 0.72, auditorium.rowSpacing + 0.08]}
+            />
             <meshStandardMaterial color="#202329" roughness={0.98} />
           </mesh>
         );
       })}
 
-      <mesh position={[-17, roomHeight / 2, roomCenterZ]} receiveShadow>
+      <mesh
+        position={[-halfRoomWidth, roomHeight / 2, roomCenterZ]}
+        receiveShadow
+      >
         <boxGeometry args={[1.2, roomHeight, roomDepth]} />
         <meshStandardMaterial color="#23262b" roughness={0.92} />
       </mesh>
-      <mesh position={[17, roomHeight / 2, roomCenterZ]} receiveShadow>
+      <mesh
+        position={[halfRoomWidth, roomHeight / 2, roomCenterZ]}
+        receiveShadow
+      >
         <boxGeometry args={[1.2, roomHeight, roomDepth]} />
         <meshStandardMaterial color="#23262b" roughness={0.92} />
       </mesh>
       <mesh position={[0, roomHeight + 0.6, roomCenterZ]} receiveShadow>
-        <boxGeometry args={[35.2, 1.2, roomDepth]} />
+        <boxGeometry args={[roomWidth + 1.2, 1.2, roomDepth]} />
         <meshStandardMaterial color="#101114" roughness={0.96} />
       </mesh>
       <mesh
         position={[0, roomHeight / 2, lastRowZ + 5]}
         receiveShadow
       >
-        <boxGeometry args={[35, roomHeight, 1]} />
+        <boxGeometry args={[roomWidth, roomHeight, 1]} />
         <meshStandardMaterial color="#202227" roughness={0.96} />
       </mesh>
 
-      {[-14.5, 14.5].map((x) =>
+      {[-aisleLightX, aisleLightX].map((x) =>
         Array.from({ length: 8 }, (_, index) => (
           <mesh
             key={`${x}-${index}`}
@@ -848,7 +861,7 @@ function AuditoriumArchitecture({
         )),
       )}
 
-      {[-15.6, 15.6].map((x) => (
+      {[-acousticPanelX, acousticPanelX].map((x) => (
         <group key={x}>
           <mesh position={[x, 6.8, -5]}>
             <boxGeometry args={[0.08, 7.8, 17]} />

@@ -586,6 +586,16 @@ button {
   gap: 3px;
 }
 
+.seat-row-buttons.has-captured-layout {
+  display: grid;
+  justify-content: center;
+  gap: 3px;
+}
+
+.seat-row-buttons.has-captured-layout .seat-button {
+  width: 100%;
+}
+
 .seat-button {
   width: 9px;
   height: 11px;

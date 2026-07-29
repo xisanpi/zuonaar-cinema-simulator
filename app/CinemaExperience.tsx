@@ -13,7 +13,12 @@ import {
   Play,
   SunDim,
 } from "@phosphor-icons/react";
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from "react";
 import {
   auditoriums,
   buildSeats,
@@ -338,7 +343,21 @@ export function CinemaExperience({
               return (
                 <div className="seat-row" key={row}>
                   <span className="row-label">{rowSeats[0]?.rowLabel}</span>
-                  <div className="seat-row-buttons">
+                  <div
+                    className={`seat-row-buttons ${
+                      auditorium.seatLayout ? "has-captured-layout" : ""
+                    }`}
+                    style={
+                      auditorium.seatLayout
+                        ? ({
+                            gridTemplateColumns: `repeat(${auditorium.seatLayout.gridColumns}, 9px)`,
+                            minWidth: `${
+                              auditorium.seatLayout.gridColumns * 12
+                            }px`,
+                          } satisfies CSSProperties)
+                        : undefined
+                    }
+                  >
                     {rowSeats.map((seat, index) => (
                       <button
                         type="button"
@@ -347,10 +366,18 @@ export function CinemaExperience({
                           "seat-button",
                           seat.id === selectedSeat.id ? "is-selected" : "",
                           seat.status === "occupied" ? "is-occupied" : "",
-                          index === rowSeats.length / 2 ? "after-aisle" : "",
+                          !auditorium.seatLayout &&
+                          index === rowSeats.length / 2
+                            ? "after-aisle"
+                            : "",
                         ]
                           .filter(Boolean)
                           .join(" ")}
+                        style={
+                          auditorium.seatLayout
+                            ? { gridColumn: seat.gridSlot }
+                            : undefined
+                        }
                         onClick={() => selectSeat(seat)}
                         disabled={seat.status === "occupied"}
                         aria-label={`${seat.rowLabel} 排 ${seat.number} 座${

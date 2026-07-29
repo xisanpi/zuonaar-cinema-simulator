@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 async function render(pathname = "/") {
@@ -59,4 +60,38 @@ test("server-renders a selected auditorium simulator", async () => {
 test("unknown auditoriums return not found", async () => {
   const response = await render("/cinema/not-a-real-hall");
   assert.equal(response.status, 404);
+});
+
+test("captured seat layouts map cleanly to inventory halls", async () => {
+  const [inventory, seatLayoutData] = await Promise.all([
+    readFile(new URL("../app/cinema-inventory.json", import.meta.url), "utf8"),
+    readFile(new URL("../app/seat-layouts.json", import.meta.url), "utf8"),
+  ]).then((files) => files.map((file) => JSON.parse(file)));
+  const inventoryIds = new Set(inventory.map((hall) => hall.id));
+  const layouts = Object.entries(seatLayoutData.layouts);
+
+  assert.equal(layouts.length, 51);
+
+  for (const [hallId, layout] of layouts) {
+    assert.equal(inventoryIds.has(hallId), true, `${hallId} is not in inventory`);
+    assert.equal(
+      layout.rows.reduce((total, row) => total + row.cells.length, 0),
+      layout.physicalSeats,
+      `${hallId} physical seat count differs from its rows`,
+    );
+
+    for (const row of layout.rows) {
+      const slots = row.cells.map(([, slot]) => slot);
+      assert.equal(
+        new Set(slots).size,
+        slots.length,
+        `${hallId} has duplicate slots`,
+      );
+      assert.equal(
+        slots.every((slot) => slot >= 1 && slot <= layout.gridColumns),
+        true,
+        `${hallId} has a slot outside its grid`,
+      );
+    }
+  }
 });

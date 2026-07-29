@@ -30,6 +30,8 @@ type UserLocation = {
 
 const defaultCity =
   citySummaries.find((city) => city.name === "北京") ?? citySummaries[0];
+const cityStorageKey = "zuonaar-selected-city";
+const locationStorageKey = "zuonaar-user-location";
 
 function DbxIcon({
   name,
@@ -200,38 +202,75 @@ export function CinemaFinder() {
     label: `${defaultCity.name}市中心`,
     mode: "city-center",
   });
+  const [preferencesReady, setPreferencesReady] = useState(false);
   const locationPanelRef = useRef<HTMLElement>(null);
 
   const city =
     citySummaries.find((item) => item.name === cityName) ?? defaultCity;
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("zuonaar-user-location");
-    if (!saved) return;
-    let parsed: UserLocation;
-    try {
-      parsed = JSON.parse(saved) as UserLocation;
-    } catch {
-      window.localStorage.removeItem("zuonaar-user-location");
-      return;
+    const savedCityName = window.localStorage.getItem(cityStorageKey);
+    const savedCity = citySummaries.find(
+      (item) => item.name === savedCityName,
+    );
+    if (savedCityName && !savedCity) {
+      window.localStorage.removeItem(cityStorageKey);
     }
-    if (
-      !Number.isFinite(parsed.latitude) ||
-      !Number.isFinite(parsed.longitude) ||
-      !parsed.label
-    ) {
-      return;
+
+    const savedLocation = window.localStorage.getItem(locationStorageKey);
+    let parsedLocation: UserLocation | null = null;
+    if (savedLocation) {
+      try {
+        const parsed = JSON.parse(savedLocation) as UserLocation;
+        const validMode = ["city-center", "device", "manual"].includes(
+          parsed.mode,
+        );
+        if (
+          Number.isFinite(parsed.latitude) &&
+          Number.isFinite(parsed.longitude) &&
+          parsed.label &&
+          validMode
+        ) {
+          parsedLocation = parsed;
+        } else {
+          window.localStorage.removeItem(locationStorageKey);
+        }
+      } catch {
+        window.localStorage.removeItem(locationStorageKey);
+      }
     }
-    const timer = window.setTimeout(() => setUserLocation(parsed), 0);
+
+    const timer = window.setTimeout(() => {
+      if (savedCity) setCityName(savedCity.name);
+      if (
+        parsedLocation?.mode === "device" ||
+        parsedLocation?.mode === "manual"
+      ) {
+        setUserLocation(parsedLocation);
+      } else if (savedCity) {
+        setUserLocation({
+          ...savedCity.center,
+          label: `${savedCity.name}市中心`,
+          mode: "city-center",
+        });
+      }
+      setPreferencesReady(true);
+    }, 0);
     return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
+    if (!preferencesReady) return;
+    window.localStorage.setItem(cityStorageKey, city.name);
+  }, [city.name, preferencesReady]);
+
+  useEffect(() => {
+    if (!preferencesReady) return;
     window.localStorage.setItem(
-      "zuonaar-user-location",
+      locationStorageKey,
       JSON.stringify(userLocation),
     );
-  }, [userLocation]);
+  }, [preferencesReady, userLocation]);
 
   useEffect(() => {
     if (!locationOpen) return;
