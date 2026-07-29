@@ -312,6 +312,15 @@ export function CinemaExperience() {
               <strong>{auditorium.projectionTechnology}</strong>
               <small>{auditorium.projectionDetails.join(" / ")}</small>
             </div>
+            <div className="screen-surface-spec">
+              <span>幕面光学模型</span>
+              <strong>{auditorium.screenSurface.name}</strong>
+              <small>
+                增益 {auditorium.screenSurface.gain.toFixed(1)} / 半增益角{" "}
+                {auditorium.screenSurface.halfGainAngle}° / 数字微孔{" "}
+                {auditorium.screenSurface.perforationMm.toFixed(1)} mm
+              </small>
+            </div>
           </section>
 
           <div className="screen-key">

@@ -23,6 +23,14 @@ export type Auditorium = {
   screenAspect: string;
   projectionTechnology: string;
   projectionDetails: string[];
+  screenSurface: {
+    name: string;
+    gain: number;
+    halfGainAngle: number;
+    perforationMm: number;
+    openAreaPercent: number;
+    curvatureDepth: number;
+  };
   rowCount: number;
   rowSpacing: number;
   rowRise: number;
@@ -66,6 +74,14 @@ export const auditoriums: Auditorium[] = [
     screenAspect: "1.43:1 满幅",
     projectionTechnology: "IMAX GT Laser",
     projectionDetails: ["双机 4K 激光", "1.43:1 满幅支持", "12 声道 IMAX 音响"],
+    screenSurface: {
+      name: "宽视角白色增益幕（模拟）",
+      gain: 1.4,
+      halfGainAngle: 85,
+      perforationMm: 0.9,
+      openAreaPercent: 4.16,
+      curvatureDepth: 0.33,
+    },
     rowCount: 10,
     rowSpacing: 1.85,
     rowRise: 0.52,
@@ -85,6 +101,14 @@ export const auditoriums: Auditorium[] = [
     screenAspect: "1.90:1",
     projectionTechnology: "IMAX Laser",
     projectionDetails: ["4K 激光放映", "1.90:1 画幅", "IMAX 多声道音响"],
+    screenSurface: {
+      name: "宽视角白色增益幕（模拟）",
+      gain: 1.4,
+      halfGainAngle: 85,
+      perforationMm: 0.9,
+      openAreaPercent: 4.16,
+      curvatureDepth: 0.24,
+    },
     rowCount: 10,
     rowSpacing: 1.7,
     rowRise: 0.46,

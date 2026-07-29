@@ -464,6 +464,12 @@ button {
   border-left: 1px solid var(--line);
 }
 
+.technical-summary > .screen-surface-spec {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--line);
+  border-left: 0;
+}
+
 .technical-summary span {
   color: var(--subtle);
   font-size: 9px;

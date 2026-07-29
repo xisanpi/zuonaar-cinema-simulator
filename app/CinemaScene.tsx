@@ -11,7 +11,9 @@ import {
   Matrix4,
   Object3D,
   PerspectiveCamera,
+  PlaneGeometry,
   Quaternion,
+  ShaderMaterial,
   SRGBColorSpace,
   Vector3,
   VideoTexture,
@@ -47,6 +49,85 @@ type CinemaSceneProps = {
 };
 
 const upVector = new Vector3(0, 1, 0);
+const silverScreenVertexShader = `
+  varying vec2 vUv;
+  varying vec3 vWorldNormal;
+  varying vec3 vWorldPosition;
+
+  void main() {
+    vUv = uv;
+    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+    vWorldPosition = worldPosition.xyz;
+    vWorldNormal = normalize(mat3(modelMatrix) * normal);
+    gl_Position = projectionMatrix * viewMatrix * worldPosition;
+  }
+`;
+
+const silverScreenFragmentShader = `
+  uniform float uDimmed;
+  uniform float uGain;
+  uniform float uHalfGainAngle;
+  uniform float uReflectiveArea;
+
+  varying vec2 vUv;
+  varying vec3 vWorldNormal;
+  varying vec3 vWorldPosition;
+
+  float hash21(vec2 value) {
+    value = fract(value * vec2(123.34, 456.21));
+    value += dot(value, value + 45.32);
+    return fract(value.x * value.y);
+  }
+
+  void main() {
+    vec3 normal = normalize(vWorldNormal);
+    vec3 viewDirection = normalize(cameraPosition - vWorldPosition);
+    float facing = clamp(dot(normal, viewDirection), 0.0, 1.0);
+
+    vec3 warmLight = normalize(vec3(-0.46, 0.58, 1.0));
+    vec3 coolLight = normalize(vec3(0.62, 0.36, 1.0));
+    float warmReflection = pow(
+      max(dot(normal, normalize(warmLight + viewDirection)), 0.0),
+      15.0
+    );
+    float coolReflection = pow(
+      max(dot(normal, normalize(coolLight + viewDirection)), 0.0),
+      22.0
+    );
+
+    float viewingAngle = acos(clamp(facing, 0.0001, 1.0));
+    float gainCurve = exp(
+      -0.69314718 * pow(viewingAngle / uHalfGainAngle, 2.0)
+    );
+    float gainStrength = clamp((uGain - 1.0) / 2.0, 0.0, 1.0);
+    float screenGain =
+      mix(0.78, 0.62, gainStrength) +
+      gainCurve * mix(0.22, 0.38, gainStrength);
+    float edgeFalloff = 1.0 - length(vUv - vec2(0.5)) * 0.025;
+    vec2 grainCell = floor(vUv * vec2(1480.0, 940.0));
+    float grain = (hash21(grainCell) - 0.5) * 0.014;
+
+    float baseLevel = mix(0.42, 0.2, uDimmed);
+    float reflectionLevel = mix(1.0, 0.42, uDimmed);
+    float luminance =
+      baseLevel * screenGain * edgeFalloff +
+      warmReflection * 0.1 * reflectionLevel +
+      coolReflection * 0.055 * reflectionLevel +
+      grain;
+
+    // Digital perforations account for roughly 4.16% open area. At normal
+    // seating distances they affect reflectance, not as individually visible dots.
+    luminance *= uReflectiveArea;
+
+    vec3 silver = vec3(0.94, 0.95, 0.945) * luminance;
+    silver += vec3(0.008, 0.006, 0.003) * warmReflection;
+    silver += vec3(0.002, 0.005, 0.008) * coolReflection;
+
+    gl_FragColor = vec4(silver, 1.0);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }
+`;
 
 function quaternionLookingAt(position: Vector3, target: Vector3) {
   const helper = new PerspectiveCamera();
@@ -54,6 +135,25 @@ function quaternionLookingAt(position: Vector3, target: Vector3) {
   helper.up.copy(upVector);
   helper.lookAt(target);
   return helper.quaternion.clone();
+}
+
+function createCurvedScreenGeometry(
+  width: number,
+  height: number,
+  curveDepth: number,
+) {
+  const geometry = new PlaneGeometry(width, height, 56, 18);
+  const position = geometry.getAttribute("position");
+
+  for (let index = 0; index < position.count; index += 1) {
+    const normalizedX = position.getX(index) / (width / 2);
+    position.setZ(index, curveDepth * normalizedX * normalizedX);
+  }
+
+  position.needsUpdate = true;
+  geometry.computeVertexNormals();
+  geometry.computeBoundingSphere();
+  return geometry;
 }
 
 function CameraRig({
@@ -160,6 +260,67 @@ function CameraRig({
   return null;
 }
 
+function SilverScreenSurface({
+  auditorium,
+  dimmed,
+}: Pick<CinemaSceneProps, "auditorium"> & { dimmed: boolean }) {
+  const materialRef = useRef<ShaderMaterial>(null);
+  const uniforms = useMemo(
+    () => ({
+      uDimmed: { value: 0 },
+      uGain: { value: auditorium.screenSurface.gain },
+      uHalfGainAngle: {
+        value: (auditorium.screenSurface.halfGainAngle * Math.PI) / 180,
+      },
+      uReflectiveArea: {
+        value: 1 - auditorium.screenSurface.openAreaPercent / 100,
+      },
+    }),
+    [
+      auditorium.screenSurface.gain,
+      auditorium.screenSurface.halfGainAngle,
+      auditorium.screenSurface.openAreaPercent,
+    ],
+  );
+  const geometry = useMemo(
+    () =>
+      createCurvedScreenGeometry(
+        auditorium.screenWidth,
+        auditorium.screenHeight,
+        auditorium.screenSurface.curvatureDepth,
+      ),
+    [
+      auditorium.screenHeight,
+      auditorium.screenSurface.curvatureDepth,
+      auditorium.screenWidth,
+    ],
+  );
+
+  useEffect(() => {
+    uniforms.uDimmed.value = dimmed ? 1 : 0;
+  }, [dimmed, uniforms]);
+
+  useEffect(() => () => geometry.dispose(), [geometry]);
+
+  return (
+    <mesh
+      position={[
+        0,
+        auditorium.screenBottom + auditorium.screenHeight / 2,
+        auditorium.screenZ + 0.065,
+      ]}
+    >
+      <primitive object={geometry} attach="geometry" />
+      <shaderMaterial
+        ref={materialRef}
+        vertexShader={silverScreenVertexShader}
+        fragmentShader={silverScreenFragmentShader}
+        uniforms={uniforms}
+      />
+    </mesh>
+  );
+}
+
 function VideoSurface({
   auditorium,
   active,
@@ -203,16 +364,29 @@ function VideoSurface({
     auditorium.screenHeight - 0.6,
     auditorium.screenWidth / (16 / 9),
   );
+  const videoWidth = auditorium.screenWidth - 0.45;
+  const geometry = useMemo(
+    () =>
+      createCurvedScreenGeometry(
+        videoWidth,
+        videoHeight,
+        auditorium.screenSurface.curvatureDepth,
+      ),
+    [auditorium.screenSurface.curvatureDepth, videoHeight, videoWidth],
+  );
+
+  useEffect(() => () => geometry.dispose(), [geometry]);
 
   return (
     <mesh
+      visible={active}
       position={[
         0,
         auditorium.screenBottom + auditorium.screenHeight / 2,
-        auditorium.screenZ + 0.055,
+        auditorium.screenZ + 0.085,
       ]}
     >
-      <planeGeometry args={[auditorium.screenWidth - 0.45, videoHeight]} />
+      <primitive object={geometry} attach="geometry" />
       <meshBasicMaterial
         map={active ? texture : null}
         color={active ? "#ffffff" : "#c9c8c2"}
@@ -239,21 +413,10 @@ function Screen({
         />
         <meshStandardMaterial color="#111315" roughness={0.9} />
       </mesh>
-      <mesh position={[0, centerY, auditorium.screenZ + 0.035]}>
-        <planeGeometry
-          args={[auditorium.screenWidth, auditorium.screenHeight]}
-        />
-        <meshPhysicalMaterial
-          color={filmMode ? "#111416" : "#d2d0c9"}
-          roughness={0.82}
-          metalness={0.05}
-          emissive={filmMode ? "#101417" : "#353431"}
-          emissiveIntensity={filmMode ? 0.16 : 0.08}
-        />
-      </mesh>
+      <SilverScreenSurface auditorium={auditorium} dimmed={filmMode} />
       <VideoSurface
         auditorium={auditorium}
-        active={filmMode}
+        active={filmMode && playing}
         playing={playing}
       />
       {filmMode && (
