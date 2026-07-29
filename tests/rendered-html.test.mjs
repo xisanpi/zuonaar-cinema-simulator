@@ -47,11 +47,12 @@ test("server-renders a selected auditorium simulator", async () => {
   const html = await response.text();
   assert.match(html, /影院视野模拟器/);
   assert.match(html, /中国电影博物馆/);
-  assert.match(html, /自由视角/);
   assert.match(html, /幕面光学模型/);
   assert.match(html, /IMAX Laser Countdown（在线）/);
-  assert.match(html, /从这里看/);
+  assert.match(html, /H 排 12 座/);
   assert.match(html, /返回/);
+  assert.doesNotMatch(html, /自由视角/);
+  assert.doesNotMatch(html, /从这里看/);
   assert.doesNotMatch(html, />全厅</);
 });
 

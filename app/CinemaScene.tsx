@@ -31,8 +31,6 @@ import {
 } from "react";
 import type { Auditorium, FilmSource, Seat } from "./cinema-data";
 
-type ViewMode = "overview" | "seat";
-
 type ViewCommand = {
   yaw: number;
   pitch: number;
@@ -43,7 +41,6 @@ type CinemaSceneProps = {
   auditorium: Auditorium;
   seats: Seat[];
   selectedSeat: Seat;
-  viewMode: ViewMode;
   filmMode: boolean;
   playing: boolean;
   filmSource: FilmSource;
@@ -321,11 +318,10 @@ function OnlineVideoTracker({
 function CameraRig({
   auditorium,
   selectedSeat,
-  viewMode,
   viewCommand,
 }: Pick<
   CinemaSceneProps,
-  "auditorium" | "selectedSeat" | "viewMode" | "viewCommand"
+  "auditorium" | "selectedSeat" | "viewCommand"
 >) {
   const { camera, gl } = useThree();
   const desiredPosition = useRef(new Vector3());
@@ -335,18 +331,16 @@ function CameraRig({
   const dragging = useRef(false);
 
   useEffect(() => {
-    const position =
-      viewMode === "seat"
-        ? new Vector3(selectedSeat.x, selectedSeat.y + 1.18, selectedSeat.z)
-        : new Vector3(0, 11.5, 15.5);
-    const target =
-      viewMode === "seat"
-        ? new Vector3(
-            0,
-            auditorium.screenBottom + auditorium.screenHeight / 2,
-            auditorium.screenZ,
-          )
-        : new Vector3(0, 7.2, -9);
+    const position = new Vector3(
+      selectedSeat.x,
+      selectedSeat.y + 1.18,
+      selectedSeat.z,
+    );
+    const target = new Vector3(
+      0,
+      auditorium.screenBottom + auditorium.screenHeight / 2,
+      auditorium.screenZ,
+    );
     const quaternion = quaternionLookingAt(position, target);
 
     desiredPosition.current.copy(position);
@@ -354,10 +348,10 @@ function CameraRig({
     desiredEuler.current.setFromQuaternion(quaternion, "YXZ");
 
     if (camera instanceof PerspectiveCamera) {
-      camera.fov = viewMode === "seat" ? 66 : 50;
+      camera.fov = 66;
       camera.updateProjectionMatrix();
     }
-  }, [auditorium, camera, selectedSeat, viewMode]);
+  }, [auditorium, camera, selectedSeat]);
 
   useEffect(() => {
     if (viewCommand.token === 0) return;
@@ -1096,7 +1090,6 @@ function SceneContents(props: CinemaSceneProps) {
       <CameraRig
         auditorium={auditorium}
         selectedSeat={props.selectedSeat}
-        viewMode={props.viewMode}
         viewCommand={props.viewCommand}
       />
     </>
@@ -1109,14 +1102,11 @@ export function CinemaScene(props: CinemaSceneProps) {
     props.filmMode &&
     props.playing &&
     props.filmSource === "imax-countdown";
-  const initialCameraPosition: [number, number, number] =
-    props.viewMode === "seat"
-      ? [
-          props.selectedSeat.x,
-          props.selectedSeat.y + 1.18,
-          props.selectedSeat.z,
-        ]
-      : [0, 11.5, 15.5];
+  const initialCameraPosition: [number, number, number] = [
+    props.selectedSeat.x,
+    props.selectedSeat.y + 1.18,
+    props.selectedSeat.z,
+  ];
 
   return (
     <>
@@ -1125,7 +1115,7 @@ export function CinemaScene(props: CinemaSceneProps) {
         dpr={props.isMobile ? [1, 1.35] : [1, 1.75]}
         camera={{
           position: initialCameraPosition,
-          fov: props.viewMode === "seat" ? 66 : 50,
+          fov: 66,
           near: 0.1,
           far: 120,
         }}

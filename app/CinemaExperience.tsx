@@ -7,9 +7,7 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
-  Eye,
   FilmSlate,
-  MapTrifold,
   Moon,
   Pause,
   Play,
@@ -39,8 +37,6 @@ const CinemaScene = dynamic(
   },
 );
 
-type ViewMode = "overview" | "seat";
-
 type ViewCommand = {
   yaw: number;
   pitch: number;
@@ -51,13 +47,18 @@ function getDefaultSeatId(auditoriumId: string) {
   const auditorium =
     auditoriums.find((item) => item.id === auditoriumId) ?? auditoriums[0];
   const seats = buildSeats(auditorium);
-  return (
-    seats.find(
-      (seat) =>
-        seat.row === 6 &&
-        seat.number === Math.ceil(auditorium.rowSeatCounts[6] / 2),
-    ) ?? seats[0]
-  ).id;
+  const centerRow = Math.floor(auditorium.rowCount / 2);
+  const centerSeat =
+    seats
+      .filter((seat) => seat.status === "available")
+      .sort(
+        (left, right) =>
+          Math.abs(left.row - centerRow) * 2 +
+          Math.abs(left.x) -
+          (Math.abs(right.row - centerRow) * 2 + Math.abs(right.x)),
+      )[0] ?? seats[0];
+
+  return centerSeat.id;
 }
 
 export function CinemaExperience({
@@ -71,7 +72,6 @@ export function CinemaExperience({
   const [selectedSeatId, setSelectedSeatId] = useState(() =>
     getDefaultSeatId(initialAuditorium.id),
   );
-  const [viewMode, setViewMode] = useState<ViewMode>("seat");
   const [filmMode, setFilmMode] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [filmSource, setFilmSource] = useState<FilmSource>("local-demo");
@@ -89,11 +89,7 @@ export function CinemaExperience({
   const seats = useMemo(() => buildSeats(auditorium), [auditorium]);
   const selectedSeat =
     seats.find((seat) => seat.id === selectedSeatId) ??
-    seats.find(
-      (seat) =>
-        seat.row === 6 &&
-        seat.number === Math.ceil(auditorium.rowSeatCounts[6] / 2),
-    ) ??
+    seats.find((seat) => seat.id === getDefaultSeatId(auditorium.id)) ??
     seats[0];
   const metrics = getSeatMetrics(auditorium, selectedSeat);
 
@@ -108,13 +104,11 @@ export function CinemaExperience({
   const switchAuditorium = (nextAuditoriumId: string) => {
     setAuditoriumId(nextAuditoriumId);
     setSelectedSeatId(getDefaultSeatId(nextAuditoriumId));
-    setViewMode("seat");
   };
 
   const selectSeat = (seat: Seat) => {
     if (seat.status === "occupied") return;
     setSelectedSeatId(seat.id);
-    setViewMode("seat");
   };
 
   const toggleFilmMode = () => {
@@ -193,7 +187,6 @@ export function CinemaExperience({
             auditorium={auditorium}
             seats={seats}
             selectedSeat={selectedSeat}
-            viewMode={viewMode}
             filmMode={filmMode}
             playing={playing}
             filmSource={filmSource}
@@ -207,27 +200,6 @@ export function CinemaExperience({
             <strong>
               {selectedSeat.rowLabel} 排 {selectedSeat.number} 座
             </strong>
-          </div>
-
-          <div className="view-switcher" aria-label="视角">
-            <button
-              className={`free-view-toggle ${
-                viewMode === "overview" ? "is-active" : ""
-              }`}
-              type="button"
-              onClick={() =>
-                setViewMode((current) =>
-                  current === "overview" ? "seat" : "overview",
-                )
-              }
-              aria-pressed={viewMode === "overview"}
-            >
-              <MapTrifold size={18} />
-              <span>自由视角</span>
-              <span className="switch-track" aria-hidden="true">
-                <span />
-              </span>
-            </button>
           </div>
 
           <div className="scene-controls">
@@ -316,11 +288,7 @@ export function CinemaExperience({
             </button>
           </div>
 
-          <p className="gesture-hint">
-            {viewMode === "seat"
-              ? "拖动观察银幕，视点固定在当前座位"
-              : "拖动自由观察影厅"}
-          </p>
+          <p className="gesture-hint">拖动观察银幕，视点固定在当前座位</p>
         </div>
 
         <aside className="seat-panel" aria-label="选座与体验指标">
@@ -432,14 +400,6 @@ export function CinemaExperience({
                 <dd>{metrics.distance.toFixed(1)} m</dd>
               </div>
             </dl>
-            <button
-              className="enter-seat-button"
-              type="button"
-              onClick={() => setViewMode("seat")}
-            >
-              从这里看
-              <Eye size={18} />
-            </button>
           </section>
 
           <p className="data-note">
