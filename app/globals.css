@@ -209,8 +209,9 @@ button {
   cursor: pointer;
   transition:
     transform 160ms ease,
-    background 160ms ease,
-    border-color 160ms ease;
+    color 280ms ease,
+    background 280ms ease,
+    border-color 280ms ease;
 }
 
 .projection-toggle:hover {

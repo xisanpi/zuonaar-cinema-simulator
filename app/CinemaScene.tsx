@@ -5,16 +5,23 @@
 
 import { Canvas, type ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import {
+  AmbientLight,
   Color,
   Euler,
   ExtrudeGeometry,
+  Fog,
+  HemisphereLight,
   InstancedMesh,
   Matrix4,
+  MeshBasicMaterial,
   Object3D,
   PerspectiveCamera,
   PlaneGeometry,
+  PointLight,
   Quaternion,
+  ShaderMaterial,
   Shape,
+  SpotLight,
   SRGBColorSpace,
   Vector3,
   VideoTexture,
@@ -53,6 +60,9 @@ const countdownPreviewId = "666393527";
 const countdownPreviewEmbed = `https://player.vimeo.com/video/${countdownPreviewId}?autoplay=1&muted=1&background=1&loop=1&autopause=0&dnt=1`;
 const countdownPreviewWidth = 1440;
 const countdownPreviewHeight = 1080;
+const lightingTransitionSpeed = 3.2;
+const smoothFactor = (delta: number) =>
+  1 - Math.exp(-lightingTransitionSpeed * delta);
 const silverScreenVertexShader = `
   varying vec2 vUv;
   varying vec3 vWorldNormal;
@@ -71,6 +81,7 @@ const silverScreenFragmentShader = `
   uniform float uGain;
   uniform float uHalfGainAngle;
   uniform float uReflectiveArea;
+  uniform float uHouseLights;
 
   varying vec2 vUv;
   varying vec3 vWorldNormal;
@@ -157,7 +168,7 @@ const silverScreenFragmentShader = `
     silver += vec3(0.035, 0.022, 0.012) * warmReflection;
     silver += vec3(0.012, 0.025, 0.045) * coolReflection;
 
-    gl_FragColor = vec4(silver, 1.0);
+    gl_FragColor = vec4(silver * clamp(uHouseLights, 0.0, 1.0), 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }
@@ -442,7 +453,8 @@ function ScreenSurface({
   auditorium,
   blackout,
 }: Pick<CinemaSceneProps, "auditorium"> & { blackout: boolean }) {
-  const uniforms = useMemo(
+  const materialRef = useRef<ShaderMaterial>(null);
+  const [uniforms] = useState(
     () => ({
       uGain: { value: auditorium.screenSurface.gain },
       uHalfGainAngle: {
@@ -451,12 +463,8 @@ function ScreenSurface({
       uReflectiveArea: {
         value: 1 - auditorium.screenSurface.openAreaPercent / 100,
       },
+      uHouseLights: { value: blackout ? 0 : 1 },
     }),
-    [
-      auditorium.screenSurface.gain,
-      auditorium.screenSurface.halfGainAngle,
-      auditorium.screenSurface.openAreaPercent,
-    ],
   );
   const geometry = useMemo(
     () =>
@@ -473,6 +481,25 @@ function ScreenSurface({
   );
 
   useEffect(() => () => geometry.dispose(), [geometry]);
+  useEffect(() => {
+    uniforms.uGain.value = auditorium.screenSurface.gain;
+    uniforms.uHalfGainAngle.value =
+      (auditorium.screenSurface.halfGainAngle * Math.PI) / 180;
+    uniforms.uReflectiveArea.value =
+      1 - auditorium.screenSurface.openAreaPercent / 100;
+  }, [
+    auditorium.screenSurface.gain,
+    auditorium.screenSurface.halfGainAngle,
+    auditorium.screenSurface.openAreaPercent,
+    uniforms,
+  ]);
+  useFrame((_, delta) => {
+    const material = materialRef.current;
+    if (!material) return;
+    const target = blackout ? 0 : 1;
+    material.uniforms.uHouseLights.value +=
+      (target - material.uniforms.uHouseLights.value) * smoothFactor(delta);
+  });
 
   return (
     <mesh
@@ -483,15 +510,12 @@ function ScreenSurface({
       ]}
     >
       <primitive object={geometry} attach="geometry" />
-      {blackout ? (
-        <meshBasicMaterial color="#000000" toneMapped={false} />
-      ) : (
-        <shaderMaterial
-          vertexShader={silverScreenVertexShader}
-          fragmentShader={silverScreenFragmentShader}
-          uniforms={uniforms}
-        />
-      )}
+      <shaderMaterial
+        ref={materialRef}
+        vertexShader={silverScreenVertexShader}
+        fragmentShader={silverScreenFragmentShader}
+        uniforms={uniforms}
+      />
     </mesh>
   );
 }
@@ -598,6 +622,32 @@ function Screen({
   const centerY = auditorium.screenBottom + auditorium.screenHeight / 2;
   const screenTop = auditorium.screenBottom + auditorium.screenHeight;
   const workLightOffsets = [-0.32, 0, 0.32];
+  const workLightRefs = useRef<Array<SpotLight | null>>([]);
+  const bulbMaterialRefs = useRef<Array<MeshBasicMaterial | null>>([]);
+  const filmBounceRef = useRef<PointLight>(null);
+  const [initialHouseLights] = useState(() => (filmMode ? 0 : 1));
+
+  useFrame((_, delta) => {
+    const factor = smoothFactor(delta);
+    const workLightTarget = filmMode ? 0 : 310;
+    const bulbTarget = filmMode ? 0 : 1;
+
+    workLightRefs.current.forEach((light) => {
+      if (light) {
+        light.intensity += (workLightTarget - light.intensity) * factor;
+      }
+    });
+    bulbMaterialRefs.current.forEach((material) => {
+      if (material) {
+        material.opacity += (bulbTarget - material.opacity) * factor;
+      }
+    });
+    if (filmBounceRef.current) {
+      const target = filmMode ? 130 : 0;
+      filmBounceRef.current.intensity +=
+        (target - filmBounceRef.current.intensity) * factor;
+    }
+  });
 
   return (
     <group>
@@ -615,66 +665,75 @@ function Screen({
         active={filmMode && playing && filmSource === "local-demo"}
         playing={playing}
       />
-      {!filmMode &&
-        workLightOffsets.map((offset) => {
-          const lightX = auditorium.screenWidth * offset;
-          return (
-            <group key={offset}>
-              <spotLight
-                position={[
-                  lightX,
-                  screenTop + 1.1,
-                  auditorium.screenZ + 2.4,
-                ]}
-                target-position={[
-                  lightX,
-                  centerY - auditorium.screenHeight * 0.16,
-                  auditorium.screenZ,
-                ]}
-                angle={0.34}
-                penumbra={0.82}
-                intensity={310}
-                distance={auditorium.screenHeight + 9}
-                decay={1.8}
-                color="#ffd2a8"
+      {workLightOffsets.map((offset, index) => {
+        const lightX = auditorium.screenWidth * offset;
+        return (
+          <group key={offset}>
+            <spotLight
+              ref={(light) => {
+                workLightRefs.current[index] = light;
+              }}
+              position={[
+                lightX,
+                screenTop + 1.1,
+                auditorium.screenZ + 2.4,
+              ]}
+              target-position={[
+                lightX,
+                centerY - auditorium.screenHeight * 0.16,
+                auditorium.screenZ,
+              ]}
+              angle={0.34}
+              penumbra={0.82}
+              intensity={310 * initialHouseLights}
+              distance={auditorium.screenHeight + 9}
+              decay={1.8}
+              color="#ffd2a8"
+            />
+            <mesh
+              position={[
+                lightX,
+                screenTop + 0.5,
+                auditorium.screenZ + 0.58,
+              ]}
+            >
+              <cylinderGeometry args={[0.13, 0.18, 0.28, 16]} />
+              <meshStandardMaterial
+                color="#15171a"
+                roughness={0.3}
+                metalness={0.82}
               />
-              <mesh
-                position={[
-                  lightX,
-                  screenTop + 0.5,
-                  auditorium.screenZ + 0.58,
-                ]}
-              >
-                <cylinderGeometry args={[0.13, 0.18, 0.28, 16]} />
-                <meshStandardMaterial
-                  color="#15171a"
-                  roughness={0.3}
-                  metalness={0.82}
-                />
-              </mesh>
-              <mesh
-                position={[
-                  lightX,
-                  screenTop + 0.34,
-                  auditorium.screenZ + 0.58,
-                ]}
-                rotation={[-Math.PI / 2, 0, 0]}
-              >
-                <circleGeometry args={[0.105, 16]} />
-                <meshBasicMaterial color="#ffd8b6" toneMapped={false} />
-              </mesh>
-            </group>
-          );
-        })}
-      {filmMode && (
-        <pointLight
-          position={[0, centerY - 1, auditorium.screenZ + 3]}
-          color="#b9d5e5"
-          intensity={130}
-          distance={32}
-          decay={2}
-        />
-      )}
+            </mesh>
+            <mesh
+              position={[
+                lightX,
+                screenTop + 0.34,
+                auditorium.screenZ + 0.58,
+              ]}
+              rotation={[-Math.PI / 2, 0, 0]}
+            >
+              <circleGeometry args={[0.105, 16]} />
+              <meshBasicMaterial
+                ref={(material) => {
+                  bulbMaterialRefs.current[index] = material;
+                }}
+                color="#ffd8b6"
+                transparent
+                opacity={initialHouseLights}
+                toneMapped={false}
+              />
+            </mesh>
+          </group>
+        );
+      })}
+      <pointLight
+        ref={filmBounceRef}
+        position={[0, centerY - 1, auditorium.screenZ + 3]}
+        color="#b9d5e5"
+        intensity={130 * (1 - initialHouseLights)}
+        distance={32}
+        decay={2}
+      />
     </group>
   );
 }
@@ -683,6 +742,15 @@ function AuditoriumArchitecture({
   auditorium,
   filmMode,
 }: Pick<CinemaSceneProps, "auditorium" | "filmMode">) {
+  const [aisleLightMaterial] = useState(
+    () =>
+      new MeshBasicMaterial({
+        color: filmMode ? "#8c3e28" : "#e5a66e",
+        toneMapped: false,
+      }),
+  );
+  const aisleLightColor = useMemo(() => new Color("#e5a66e"), []);
+  const aisleDarkColor = useMemo(() => new Color("#8c3e28"), []);
   const lastRowZ =
     auditorium.firstRowZ +
     (auditorium.rowCount - 1) * auditorium.rowSpacing;
@@ -692,6 +760,17 @@ function AuditoriumArchitecture({
     15,
     auditorium.screenBottom + auditorium.screenHeight + 2.2,
   );
+
+  useEffect(
+    () => () => aisleLightMaterial.dispose(),
+    [aisleLightMaterial],
+  );
+  useFrame((_, delta) => {
+    aisleLightMaterial.color.lerp(
+      filmMode ? aisleDarkColor : aisleLightColor,
+      smoothFactor(delta),
+    );
+  });
 
   return (
     <group>
@@ -742,10 +821,7 @@ function AuditoriumArchitecture({
             ]}
           >
             <boxGeometry args={[0.8, 0.06, 0.34]} />
-            <meshBasicMaterial
-              color={filmMode ? "#8c3e28" : "#e5a66e"}
-              toneMapped={false}
-            />
+            <primitive object={aisleLightMaterial} attach="material" />
           </mesh>
         )),
       )}
@@ -769,11 +845,10 @@ function AuditoriumArchitecture({
 function Seats({
   seats,
   selectedSeat,
-  filmMode,
   onSelectSeat,
 }: Pick<
   CinemaSceneProps,
-  "seats" | "selectedSeat" | "filmMode" | "onSelectSeat"
+  "seats" | "selectedSeat" | "onSelectSeat"
 >) {
   const cushionRef = useRef<InstancedMesh>(null);
   const backRef = useRef<InstancedMesh>(null);
@@ -993,7 +1068,7 @@ function Seats({
       <instancedMesh
         ref={cushionRef}
         args={[undefined, undefined, seats.length]}
-        castShadow={!filmMode}
+        castShadow
         onClick={handleClick}
         onPointerMove={handlePointerMove}
         onPointerOut={() => setHoveredSeatId(null)}
@@ -1013,7 +1088,7 @@ function Seats({
       <instancedMesh
         ref={backShellRef}
         args={[undefined, undefined, seats.length]}
-        castShadow={!filmMode}
+        castShadow
         onClick={handleClick}
         onPointerMove={handlePointerMove}
         onPointerOut={() => setHoveredSeatId(null)}
@@ -1033,7 +1108,7 @@ function Seats({
       <instancedMesh
         ref={backRef}
         args={[undefined, undefined, seats.length]}
-        castShadow={!filmMode}
+        castShadow
         onClick={handleClick}
         onPointerMove={handlePointerMove}
         onPointerOut={() => setHoveredSeatId(null)}
@@ -1110,54 +1185,119 @@ function Seats({
   );
 }
 
+function SceneLighting({
+  filmMode,
+  isMobile,
+}: Pick<CinemaSceneProps, "filmMode" | "isMobile">) {
+  const backgroundRef = useRef<Color>(null);
+  const fogRef = useRef<Fog>(null);
+  const ambientRef = useRef<AmbientLight>(null);
+  const hemisphereRef = useRef<HemisphereLight>(null);
+  const houseSpotRefs = useRef<Array<SpotLight | null>>([]);
+  const housePointRef = useRef<PointLight>(null);
+  const litBackground = useMemo(() => new Color("#111317"), []);
+  const darkBackground = useMemo(() => new Color("#07080a"), []);
+  const litFog = useMemo(() => new Color("#15171b"), []);
+  const darkFog = useMemo(() => new Color("#08090b"), []);
+  const litAmbient = useMemo(() => new Color("#d7c7b8"), []);
+  const darkAmbient = useMemo(() => new Color("#75808a"), []);
+  const [initialHouseLights] = useState(() => (filmMode ? 0 : 1));
+
+  useFrame((_, delta) => {
+    const factor = smoothFactor(delta);
+    const houseLevel = filmMode ? 0 : 1;
+    backgroundRef.current?.lerp(
+      filmMode ? darkBackground : litBackground,
+      factor,
+    );
+    fogRef.current?.color.lerp(filmMode ? darkFog : litFog, factor);
+
+    if (ambientRef.current) {
+      ambientRef.current.intensity +=
+        ((filmMode ? 0.07 : 0.92) - ambientRef.current.intensity) * factor;
+      ambientRef.current.color.lerp(
+        filmMode ? darkAmbient : litAmbient,
+        factor,
+      );
+    }
+    if (hemisphereRef.current) {
+      hemisphereRef.current.intensity +=
+        ((filmMode ? 0.06 : 0.58) - hemisphereRef.current.intensity) * factor;
+    }
+    houseSpotRefs.current.forEach((light) => {
+      if (light) {
+        light.intensity += (820 * houseLevel - light.intensity) * factor;
+      }
+    });
+    if (housePointRef.current) {
+      housePointRef.current.intensity +=
+        (260 * houseLevel - housePointRef.current.intensity) * factor;
+    }
+  });
+
+  return (
+    <>
+      <color
+        ref={backgroundRef}
+        attach="background"
+        args={[initialHouseLights ? "#111317" : "#07080a"]}
+      />
+      <fog
+        ref={fogRef}
+        attach="fog"
+        args={[
+          initialHouseLights ? "#15171b" : "#08090b",
+          20,
+          isMobile ? 60 : 78,
+        ]}
+      />
+      <ambientLight
+        ref={ambientRef}
+        intensity={initialHouseLights ? 0.92 : 0.07}
+        color={initialHouseLights ? "#d7c7b8" : "#75808a"}
+      />
+      <hemisphereLight
+        ref={hemisphereRef}
+        args={[
+          "#aeb8c0",
+          "#3b211e",
+          initialHouseLights ? 0.58 : 0.06,
+        ]}
+      />
+      {[-12, 12].map((x, index) => (
+        <spotLight
+          key={x}
+          ref={(light) => {
+            houseSpotRefs.current[index] = light;
+          }}
+          position={[x, 13, 8]}
+          target-position={[0, 2, -2]}
+          angle={0.66}
+          penumbra={0.9}
+          intensity={820 * initialHouseLights}
+          distance={54}
+          color="#f0c6a7"
+          castShadow={!isMobile}
+        />
+      ))}
+      <pointLight
+        ref={housePointRef}
+        position={[0, 12, 12]}
+        color="#f3c7a6"
+        intensity={260 * initialHouseLights}
+        distance={48}
+        decay={1.7}
+      />
+    </>
+  );
+}
+
 function SceneContents(props: CinemaSceneProps) {
   const { auditorium, filmMode, isMobile } = props;
 
   return (
     <>
-      <color attach="background" args={[filmMode ? "#07080a" : "#111317"]} />
-      <fog
-        attach="fog"
-        args={[filmMode ? "#08090b" : "#15171b", 20, isMobile ? 60 : 78]}
-      />
-      <ambientLight
-        intensity={filmMode ? 0.07 : 0.92}
-        color={filmMode ? "#75808a" : "#d7c7b8"}
-      />
-      <hemisphereLight
-        args={["#aeb8c0", "#3b211e", filmMode ? 0.06 : 0.58]}
-      />
-      {!filmMode && (
-        <>
-          <spotLight
-            position={[-12, 13, 8]}
-            target-position={[0, 2, -2]}
-            angle={0.66}
-            penumbra={0.9}
-            intensity={820}
-            distance={54}
-            color="#f0c6a7"
-            castShadow={!isMobile}
-          />
-          <spotLight
-            position={[12, 13, 8]}
-            target-position={[0, 2, -2]}
-            angle={0.66}
-            penumbra={0.9}
-            intensity={820}
-            distance={54}
-            color="#f0c6a7"
-            castShadow={!isMobile}
-          />
-          <pointLight
-            position={[0, 12, 12]}
-            color="#f3c7a6"
-            intensity={260}
-            distance={48}
-            decay={1.7}
-          />
-        </>
-      )}
+      <SceneLighting filmMode={filmMode} isMobile={isMobile} />
       <Screen
         auditorium={auditorium}
         filmMode={filmMode}
@@ -1171,7 +1311,6 @@ function SceneContents(props: CinemaSceneProps) {
       <Seats
         seats={props.seats}
         selectedSeat={props.selectedSeat}
-        filmMode={filmMode}
         onSelectSeat={props.onSelectSeat}
       />
       <CameraRig
@@ -1211,7 +1350,7 @@ export function CinemaScene(props: CinemaSceneProps) {
           alpha: false,
           powerPreference: "high-performance",
         }}
-        shadows={!props.isMobile && !props.filmMode}
+        shadows={!props.isMobile}
         onCreated={({ gl }) => {
           gl.toneMappingExposure = 1.28;
         }}
