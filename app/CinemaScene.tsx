@@ -14,6 +14,7 @@ import {
   InstancedMesh,
   Matrix4,
   MeshBasicMaterial,
+  MeshPhysicalMaterial,
   Object3D,
   PerspectiveCamera,
   PlaneGeometry,
@@ -69,6 +70,21 @@ const countdownPreviewHeight = 1080;
 const lightingTransitionSpeed = 3.2;
 const smoothFactor = (delta: number) =>
   1 - Math.exp(-lightingTransitionSpeed * delta);
+const tuneSeatMaterial = (
+  material: MeshPhysicalMaterial | null,
+  factor: number,
+  targetEmission: number,
+  targetSheen: number,
+  targetSpecular: number,
+) => {
+  if (!material) return;
+
+  material.emissiveIntensity +=
+    (targetEmission - material.emissiveIntensity) * factor;
+  material.sheen += (targetSheen - material.sheen) * factor;
+  material.specularIntensity +=
+    (targetSpecular - material.specularIntensity) * factor;
+};
 const silverScreenVertexShader = `
   varying vec2 vUv;
   varying vec3 vWorldNormal;
@@ -852,15 +868,20 @@ function AuditoriumArchitecture({
 function Seats({
   seats,
   selectedSeat,
+  filmMode,
   onSelectSeat,
 }: Pick<
   CinemaSceneProps,
-  "seats" | "selectedSeat" | "onSelectSeat"
+  "seats" | "selectedSeat" | "filmMode" | "onSelectSeat"
 >) {
   const cushionRef = useRef<InstancedMesh>(null);
   const backRef = useRef<InstancedMesh>(null);
   const backShellRef = useRef<InstancedMesh>(null);
   const sidePanelRef = useRef<InstancedMesh>(null);
+  const cushionMaterialRef = useRef<MeshPhysicalMaterial>(null);
+  const backMaterialRef = useRef<MeshPhysicalMaterial>(null);
+  const backShellMaterialRef = useRef<MeshPhysicalMaterial>(null);
+  const sidePanelMaterialRef = useRef<MeshPhysicalMaterial>(null);
   const armCapRef = useRef<InstancedMesh>(null);
   const cupHolderRef = useRef<InstancedMesh>(null);
   const legRef = useRef<InstancedMesh>(null);
@@ -1073,6 +1094,38 @@ function Seats({
     });
   }, [hoveredSeatId, seatColors, seats, selectedSeat.id]);
 
+  useFrame((_, delta) => {
+    const factor = smoothFactor(delta);
+    tuneSeatMaterial(
+      cushionMaterialRef.current,
+      factor,
+      filmMode ? 0.018 : 0.3,
+      filmMode ? 0.035 : 0.14,
+      filmMode ? 0.008 : 0.025,
+    );
+    tuneSeatMaterial(
+      backMaterialRef.current,
+      factor,
+      filmMode ? 0.018 : 0.3,
+      filmMode ? 0.04 : 0.16,
+      filmMode ? 0.008 : 0.025,
+    );
+    tuneSeatMaterial(
+      backShellMaterialRef.current,
+      factor,
+      filmMode ? 0.008 : 0.27,
+      filmMode ? 0.015 : 0.05,
+      filmMode ? 0.006 : 0.02,
+    );
+    tuneSeatMaterial(
+      sidePanelMaterialRef.current,
+      factor,
+      filmMode ? 0.008 : 0.27,
+      filmMode ? 0.02 : 0.08,
+      filmMode ? 0.006 : 0.02,
+    );
+  });
+
   const getSeatFromEvent = (event: ThreeEvent<PointerEvent>) => {
     if (event.instanceId === undefined) return null;
     return seats[event.instanceId] ?? null;
@@ -1102,6 +1155,7 @@ function Seats({
       >
         <primitive object={cushionGeometry} attach="geometry" />
         <meshPhysicalMaterial
+          ref={cushionMaterialRef}
           vertexColors
           roughness={0.93}
           metalness={0}
@@ -1124,6 +1178,7 @@ function Seats({
       >
         <primitive object={backGeometry} attach="geometry" />
         <meshPhysicalMaterial
+          ref={backShellMaterialRef}
           vertexColors
           roughness={0.95}
           metalness={0}
@@ -1146,6 +1201,7 @@ function Seats({
       >
         <primitive object={backGeometry} attach="geometry" />
         <meshPhysicalMaterial
+          ref={backMaterialRef}
           vertexColors
           roughness={0.93}
           metalness={0}
@@ -1164,6 +1220,7 @@ function Seats({
       >
         <primitive object={sidePanelGeometry} attach="geometry" />
         <meshPhysicalMaterial
+          ref={sidePanelMaterialRef}
           vertexColors
           roughness={0.95}
           metalness={0}
@@ -1346,6 +1403,7 @@ function SceneContents(props: CinemaSceneProps) {
       <Seats
         seats={props.seats}
         selectedSeat={props.selectedSeat}
+        filmMode={filmMode}
         onSelectSeat={props.onSelectSeat}
       />
       <CameraRig
