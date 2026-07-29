@@ -552,11 +552,25 @@ function SceneContents(props: CinemaSceneProps) {
 }
 
 export function CinemaScene(props: CinemaSceneProps) {
+  const initialCameraPosition: [number, number, number] =
+    props.viewMode === "seat"
+      ? [
+          props.selectedSeat.x,
+          props.selectedSeat.y + 1.18,
+          props.selectedSeat.z,
+        ]
+      : [0, 11.5, 15.5];
+
   return (
     <Canvas
       className="cinema-canvas"
       dpr={props.isMobile ? [1, 1.35] : [1, 1.75]}
-      camera={{ position: [0, 11.5, 15.5], fov: 50, near: 0.1, far: 120 }}
+      camera={{
+        position: initialCameraPosition,
+        fov: props.viewMode === "seat" ? 66 : 50,
+        near: 0.1,
+        far: 120,
+      }}
       gl={{
         antialias: !props.isMobile,
         alpha: false,

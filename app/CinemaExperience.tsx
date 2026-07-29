@@ -62,7 +62,7 @@ export function CinemaExperience() {
   const [selectedSeatId, setSelectedSeatId] = useState(() =>
     getDefaultSeatId(auditoriums[0].id),
   );
-  const [viewMode, setViewMode] = useState<ViewMode>("overview");
+  const [viewMode, setViewMode] = useState<ViewMode>("seat");
   const [filmMode, setFilmMode] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [viewCommand, setViewCommand] = useState<ViewCommand>({
@@ -98,7 +98,7 @@ export function CinemaExperience() {
   const switchAuditorium = (nextAuditoriumId: string) => {
     setAuditoriumId(nextAuditoriumId);
     setSelectedSeatId(getDefaultSeatId(nextAuditoriumId));
-    setViewMode("overview");
+    setViewMode("seat");
   };
 
   const selectCinema = (cinemaId: string) => {
@@ -111,7 +111,7 @@ export function CinemaExperience() {
   const selectSeat = (seat: Seat) => {
     if (seat.status === "occupied") return;
     setSelectedSeatId(seat.id);
-    if (isMobile) setViewMode("seat");
+    setViewMode("seat");
   };
 
   const toggleFilmMode = () => {
@@ -208,22 +208,22 @@ export function CinemaExperience() {
 
           <div className="view-switcher" aria-label="视角">
             <button
-              className={viewMode === "overview" ? "is-active" : ""}
+              className={`free-view-toggle ${
+                viewMode === "overview" ? "is-active" : ""
+              }`}
               type="button"
-              onClick={() => setViewMode("overview")}
+              onClick={() =>
+                setViewMode((current) =>
+                  current === "overview" ? "seat" : "overview",
+                )
+              }
               aria-pressed={viewMode === "overview"}
             >
               <MapTrifold size={18} />
-              全厅
-            </button>
-            <button
-              className={viewMode === "seat" ? "is-active" : ""}
-              type="button"
-              onClick={() => setViewMode("seat")}
-              aria-pressed={viewMode === "seat"}
-            >
-              <Eye size={18} />
-              座位
+              <span>自由视角</span>
+              <span className="switch-track" aria-hidden="true">
+                <span />
+              </span>
             </button>
           </div>
 
@@ -280,8 +280,9 @@ export function CinemaExperience() {
           </div>
 
           <p className="gesture-hint">
-            拖动观察影厅
-            {viewMode === "seat" ? "，视点固定在当前座位" : ""}
+            {viewMode === "seat"
+              ? "拖动观察银幕，视点固定在当前座位"
+              : "拖动自由观察影厅"}
           </p>
         </div>
 

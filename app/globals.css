@@ -296,9 +296,44 @@ button {
   cursor: pointer;
 }
 
+.free-view-toggle .switch-track {
+  width: 30px;
+  height: 18px;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: #2a2d33;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.free-view-toggle .switch-track span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #a8adb5;
+  transform: translateX(0);
+  transition:
+    transform 160ms ease,
+    background 160ms ease;
+}
+
 .view-switcher button.is-active {
-  background: var(--surface-soft);
+  background: rgba(123, 38, 38, 0.48);
   color: var(--text);
+}
+
+.free-view-toggle.is-active .switch-track {
+  border-color: rgba(228, 91, 83, 0.64);
+  background: var(--accent-dark);
+}
+
+.free-view-toggle.is-active .switch-track span {
+  background: #fff0ee;
+  transform: translateX(12px);
 }
 
 .scene-controls {
@@ -753,10 +788,6 @@ a:focus-visible {
   .view-switcher button {
     min-height: 36px;
     padding: 0 9px;
-  }
-
-  .view-switcher button svg {
-    display: none;
   }
 
   .scene-controls {
