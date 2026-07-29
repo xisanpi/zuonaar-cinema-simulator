@@ -1,0 +1,12 @@
+version = 1
+name = "坐哪儿影院视野模拟器"
+
+[setup]
+script = "npm install"
+
+[[actions]]
+name = "启动项目服务"
+icon = "run"
+command = 'exec bash "./scripts/start-codex-project.sh"'
+platform = "darwin"
+
