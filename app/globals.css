@@ -53,6 +53,16 @@ select {
   font: inherit;
 }
 
+select {
+  color-scheme: dark;
+}
+
+select option,
+select optgroup {
+  background-color: var(--surface-raised);
+  color: var(--text);
+}
+
 button,
 a,
 select {
