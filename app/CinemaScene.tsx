@@ -371,7 +371,7 @@ function CameraRig({
   useEffect(() => {
     const position = new Vector3(
       selectedSeat.x,
-      getSeatEyeY(auditorium, selectedSeat),
+      getSeatEyeY(selectedSeat),
       selectedSeat.z,
     );
     const target = new Vector3(
@@ -1343,7 +1343,7 @@ export function CinemaScene(props: CinemaSceneProps) {
     props.filmSource === "imax-countdown";
   const initialCameraPosition: [number, number, number] = [
     props.selectedSeat.x,
-    getSeatEyeY(props.auditorium, props.selectedSeat),
+    getSeatEyeY(props.selectedSeat),
     props.selectedSeat.z,
   ];
 
