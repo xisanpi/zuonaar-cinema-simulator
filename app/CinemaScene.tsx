@@ -1089,30 +1089,30 @@ function Seats({
     tuneSeatMaterial(
       cushionMaterialRef.current,
       factor,
-      filmMode ? 0.018 : 0.3,
-      filmMode ? 0.035 : 0.14,
-      filmMode ? 0.008 : 0.025,
+      filmMode ? 0.09 : 0.3,
+      filmMode ? 0.09 : 0.14,
+      filmMode ? 0.017 : 0.025,
     );
     tuneSeatMaterial(
       backMaterialRef.current,
       factor,
-      filmMode ? 0.018 : 0.3,
-      filmMode ? 0.04 : 0.16,
-      filmMode ? 0.008 : 0.025,
+      filmMode ? 0.09 : 0.3,
+      filmMode ? 0.1 : 0.16,
+      filmMode ? 0.017 : 0.025,
     );
     tuneSeatMaterial(
       backShellMaterialRef.current,
       factor,
-      filmMode ? 0.008 : 0.27,
-      filmMode ? 0.015 : 0.05,
-      filmMode ? 0.006 : 0.02,
+      filmMode ? 0.045 : 0.27,
+      filmMode ? 0.035 : 0.05,
+      filmMode ? 0.014 : 0.02,
     );
     tuneSeatMaterial(
       sidePanelMaterialRef.current,
       factor,
-      filmMode ? 0.008 : 0.27,
-      filmMode ? 0.02 : 0.08,
-      filmMode ? 0.006 : 0.02,
+      filmMode ? 0.045 : 0.27,
+      filmMode ? 0.055 : 0.08,
+      filmMode ? 0.014 : 0.02,
     );
   });
 
@@ -1270,7 +1270,7 @@ function SceneLighting({
 
     if (ambientRef.current) {
       ambientRef.current.intensity +=
-        ((filmMode ? 0.07 : 0.92) - ambientRef.current.intensity) * factor;
+        ((filmMode ? 0.16 : 0.92) - ambientRef.current.intensity) * factor;
       ambientRef.current.color.lerp(
         filmMode ? darkAmbient : litAmbient,
         factor,
@@ -1278,7 +1278,7 @@ function SceneLighting({
     }
     if (hemisphereRef.current) {
       hemisphereRef.current.intensity +=
-        ((filmMode ? 0.06 : 0.58) - hemisphereRef.current.intensity) * factor;
+        ((filmMode ? 0.13 : 0.58) - hemisphereRef.current.intensity) * factor;
     }
     houseSpotRefs.current.forEach((light) => {
       if (light) {
@@ -1309,7 +1309,7 @@ function SceneLighting({
       />
       <ambientLight
         ref={ambientRef}
-        intensity={initialHouseLights ? 0.92 : 0.07}
+        intensity={initialHouseLights ? 0.92 : 0.16}
         color={initialHouseLights ? "#d7c7b8" : "#75808a"}
       />
       <hemisphereLight
@@ -1317,7 +1317,7 @@ function SceneLighting({
         args={[
           "#aeb8c0",
           "#3b211e",
-          initialHouseLights ? 0.58 : 0.06,
+          initialHouseLights ? 0.58 : 0.13,
         ]}
       />
       {[-12, 12].map((x, index) => (
