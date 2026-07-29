@@ -82,6 +82,18 @@ const silverScreenFragmentShader = `
     return fract(value.x * value.y);
   }
 
+  float topSpotlight(float center, float depthFromTop) {
+    float beamWidth = 0.025 + depthFromTop * 0.19;
+    float horizontalFalloff = exp(
+      -3.2 * pow((vUv.x - center) / beamWidth, 2.0)
+    );
+    float verticalFalloff = exp(-2.15 * depthFromTop);
+    float softPool = exp(
+      -1.2 * pow((vUv.x - center) / (beamWidth * 2.5), 2.0)
+    ) * exp(-3.0 * depthFromTop);
+    return horizontalFalloff * verticalFalloff + softPool * 0.28;
+  }
+
   void main() {
     vec3 normal = normalize(vWorldNormal);
     vec3 viewDirection = normalize(cameraPosition - vWorldPosition);
@@ -108,21 +120,42 @@ const silverScreenFragmentShader = `
       gainCurve * mix(0.22, 0.38, gainStrength);
     float edgeFalloff = 1.0 - length(vUv - vec2(0.5)) * 0.025;
     vec2 grainCell = floor(vUv * vec2(1480.0, 940.0));
-    float grain = (hash21(grainCell) - 0.5) * 0.014;
+    float grainNoise = hash21(grainCell);
+    float grain = (grainNoise - 0.5) * 0.022;
+    float sparkle = pow(grainNoise, 24.0) * 0.075;
+
+    float depthFromTop = 1.0 - vUv.y;
+    float topWash =
+      topSpotlight(0.18, depthFromTop) +
+      topSpotlight(0.50, depthFromTop) * 1.08 +
+      topSpotlight(0.82, depthFromTop);
+
+    float highlightCenter =
+      0.5 + clamp(viewDirection.x * 0.72, -0.24, 0.24);
+    float movingSheen = exp(
+      -4.2 * pow((vUv.x - highlightCenter) / 0.24, 2.0)
+    );
+    float grazingSheen = pow(1.0 - facing, 1.6);
 
     float luminance =
-      0.42 * screenGain * edgeFalloff +
-      warmReflection * 0.1 +
-      coolReflection * 0.055 +
-      grain;
+      0.34 * screenGain * edgeFalloff +
+      warmReflection * 0.19 +
+      coolReflection * 0.13 +
+      movingSheen * 0.115 +
+      grazingSheen * 0.08 +
+      topWash * 0.22 +
+      grain +
+      sparkle;
 
     // Digital perforations account for roughly 4.16% open area. At normal
     // seating distances they affect reflectance, not as individually visible dots.
     luminance *= uReflectiveArea;
 
-    vec3 silver = vec3(0.94, 0.95, 0.945) * luminance;
-    silver += vec3(0.008, 0.006, 0.003) * warmReflection;
-    silver += vec3(0.002, 0.005, 0.008) * coolReflection;
+    vec3 silver = vec3(0.79, 0.82, 0.83) * luminance;
+    silver += vec3(0.17, 0.105, 0.055) * topWash;
+    silver += vec3(0.055, 0.075, 0.095) * movingSheen;
+    silver += vec3(0.035, 0.022, 0.012) * warmReflection;
+    silver += vec3(0.012, 0.025, 0.045) * coolReflection;
 
     gl_FragColor = vec4(silver, 1.0);
     #include <tonemapping_fragment>
@@ -563,6 +596,8 @@ function Screen({
   "auditorium" | "filmMode" | "playing" | "filmSource"
 >) {
   const centerY = auditorium.screenBottom + auditorium.screenHeight / 2;
+  const screenTop = auditorium.screenBottom + auditorium.screenHeight;
+  const workLightOffsets = [-0.32, 0, 0.32];
 
   return (
     <group>
@@ -580,6 +615,57 @@ function Screen({
         active={filmMode && playing && filmSource === "local-demo"}
         playing={playing}
       />
+      {!filmMode &&
+        workLightOffsets.map((offset) => {
+          const lightX = auditorium.screenWidth * offset;
+          return (
+            <group key={offset}>
+              <spotLight
+                position={[
+                  lightX,
+                  screenTop + 1.1,
+                  auditorium.screenZ + 2.4,
+                ]}
+                target-position={[
+                  lightX,
+                  centerY - auditorium.screenHeight * 0.16,
+                  auditorium.screenZ,
+                ]}
+                angle={0.34}
+                penumbra={0.82}
+                intensity={310}
+                distance={auditorium.screenHeight + 9}
+                decay={1.8}
+                color="#ffd2a8"
+              />
+              <mesh
+                position={[
+                  lightX,
+                  screenTop + 0.5,
+                  auditorium.screenZ + 0.58,
+                ]}
+              >
+                <cylinderGeometry args={[0.13, 0.18, 0.28, 16]} />
+                <meshStandardMaterial
+                  color="#15171a"
+                  roughness={0.3}
+                  metalness={0.82}
+                />
+              </mesh>
+              <mesh
+                position={[
+                  lightX,
+                  screenTop + 0.34,
+                  auditorium.screenZ + 0.58,
+                ]}
+                rotation={[-Math.PI / 2, 0, 0]}
+              >
+                <circleGeometry args={[0.105, 16]} />
+                <meshBasicMaterial color="#ffd8b6" toneMapped={false} />
+              </mesh>
+            </group>
+          );
+        })}
       {filmMode && (
         <pointLight
           position={[0, centerY - 1, auditorium.screenZ + 3]}
