@@ -182,8 +182,16 @@ export function buildSeats(auditorium: Auditorium): Seat[] {
   });
 }
 
+const rowFloorBaseY = 0.4;
+export const seatedEyeHeightAboveFloor = 1.2;
+
+export function getSeatEyeY(auditorium: Auditorium, seat: Seat) {
+  const rowFloorY = rowFloorBaseY + seat.row * auditorium.rowRise;
+  return rowFloorY + seatedEyeHeightAboveFloor;
+}
+
 export function getSeatMetrics(auditorium: Auditorium, seat: Seat) {
-  const eyeY = seat.y + 1.18;
+  const eyeY = getSeatEyeY(auditorium, seat);
   const screenCenterY = auditorium.screenBottom + auditorium.screenHeight / 2;
   const distance = Math.abs(seat.z - auditorium.screenZ);
   const horizontalFov =

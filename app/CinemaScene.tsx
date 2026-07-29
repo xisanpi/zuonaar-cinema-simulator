@@ -35,7 +35,12 @@ import {
   useRef,
   useState,
 } from "react";
-import type { Auditorium, FilmSource, Seat } from "./cinema-data";
+import {
+  getSeatEyeY,
+  type Auditorium,
+  type FilmSource,
+  type Seat,
+} from "./cinema-data";
 
 type ViewCommand = {
   yaw: number;
@@ -366,7 +371,7 @@ function CameraRig({
   useEffect(() => {
     const position = new Vector3(
       selectedSeat.x,
-      selectedSeat.y + 1.18,
+      getSeatEyeY(auditorium, selectedSeat),
       selectedSeat.z,
     );
     const target = new Vector3(
@@ -1338,7 +1343,7 @@ export function CinemaScene(props: CinemaSceneProps) {
     props.filmSource === "imax-countdown";
   const initialCameraPosition: [number, number, number] = [
     props.selectedSeat.x,
-    props.selectedSeat.y + 1.18,
+    getSeatEyeY(props.auditorium, props.selectedSeat),
     props.selectedSeat.z,
   ];
 
