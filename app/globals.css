@@ -264,7 +264,7 @@ button {
   height: 1080px;
   overflow: hidden;
   visibility: hidden;
-  background: #050607;
+  background: #000;
   transform-origin: 0 0;
   pointer-events: none;
 }

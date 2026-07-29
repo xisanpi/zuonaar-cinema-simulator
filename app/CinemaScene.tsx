@@ -15,7 +15,6 @@ import {
   PlaneGeometry,
   Quaternion,
   Shape,
-  ShaderMaterial,
   SRGBColorSpace,
   Vector3,
   VideoTexture,
@@ -54,8 +53,6 @@ const countdownPreviewId = "666393527";
 const countdownPreviewEmbed = `https://player.vimeo.com/video/${countdownPreviewId}?autoplay=1&muted=1&background=1&loop=1&autopause=0&dnt=1`;
 const countdownPreviewWidth = 1440;
 const countdownPreviewHeight = 1080;
-const countdownPreviewAspect =
-  countdownPreviewWidth / countdownPreviewHeight;
 const silverScreenVertexShader = `
   varying vec2 vUv;
   varying vec3 vWorldNormal;
@@ -71,7 +68,6 @@ const silverScreenVertexShader = `
 `;
 
 const silverScreenFragmentShader = `
-  uniform float uDimmed;
   uniform float uGain;
   uniform float uHalfGainAngle;
   uniform float uReflectiveArea;
@@ -114,12 +110,10 @@ const silverScreenFragmentShader = `
     vec2 grainCell = floor(vUv * vec2(1480.0, 940.0));
     float grain = (hash21(grainCell) - 0.5) * 0.014;
 
-    float baseLevel = mix(0.42, 0.2, uDimmed);
-    float reflectionLevel = mix(1.0, 0.42, uDimmed);
     float luminance =
-      baseLevel * screenGain * edgeFalloff +
-      warmReflection * 0.1 * reflectionLevel +
-      coolReflection * 0.055 * reflectionLevel +
+      0.42 * screenGain * edgeFalloff +
+      warmReflection * 0.1 +
+      coolReflection * 0.055 +
       grain;
 
     // Digital perforations account for roughly 4.16% open area. At normal
@@ -240,11 +234,6 @@ function OnlineVideoTracker({
   active: boolean;
   overlayRef: React.RefObject<HTMLDivElement | null>;
 }) {
-  const videoHeight = Math.min(
-    auditorium.screenHeight - 0.6,
-    (auditorium.screenWidth - 0.45) / countdownPreviewAspect,
-  );
-  const videoWidth = videoHeight * countdownPreviewAspect;
   const corners = useMemo(
     () => [
       new Vector3(),
@@ -270,8 +259,8 @@ function OnlineVideoTracker({
       auditorium.screenZ +
       0.09 +
       auditorium.screenSurface.curvatureDepth;
-    const halfWidth = videoWidth / 2;
-    const halfHeight = videoHeight / 2;
+    const halfWidth = auditorium.screenWidth / 2;
+    const halfHeight = auditorium.screenHeight / 2;
 
     corners[0].set(-halfWidth, centerY + halfHeight, edgeZ);
     corners[1].set(halfWidth, centerY + halfHeight, edgeZ);
@@ -416,14 +405,12 @@ function CameraRig({
   return null;
 }
 
-function SilverScreenSurface({
+function ScreenSurface({
   auditorium,
-  dimmed,
-}: Pick<CinemaSceneProps, "auditorium"> & { dimmed: boolean }) {
-  const materialRef = useRef<ShaderMaterial>(null);
+  blackout,
+}: Pick<CinemaSceneProps, "auditorium"> & { blackout: boolean }) {
   const uniforms = useMemo(
     () => ({
-      uDimmed: { value: 0 },
       uGain: { value: auditorium.screenSurface.gain },
       uHalfGainAngle: {
         value: (auditorium.screenSurface.halfGainAngle * Math.PI) / 180,
@@ -452,10 +439,6 @@ function SilverScreenSurface({
     ],
   );
 
-  useEffect(() => {
-    uniforms.uDimmed.value = dimmed ? 1 : 0;
-  }, [dimmed, uniforms]);
-
   useEffect(() => () => geometry.dispose(), [geometry]);
 
   return (
@@ -467,12 +450,15 @@ function SilverScreenSurface({
       ]}
     >
       <primitive object={geometry} attach="geometry" />
-      <shaderMaterial
-        ref={materialRef}
-        vertexShader={silverScreenVertexShader}
-        fragmentShader={silverScreenFragmentShader}
-        uniforms={uniforms}
-      />
+      {blackout ? (
+        <meshBasicMaterial color="#000000" toneMapped={false} />
+      ) : (
+        <shaderMaterial
+          vertexShader={silverScreenVertexShader}
+          fragmentShader={silverScreenFragmentShader}
+          uniforms={uniforms}
+        />
+      )}
     </mesh>
   );
 }
@@ -516,19 +502,34 @@ function VideoSurface({
     }
   }, [active, playing, texture]);
 
-  const videoHeight = Math.min(
-    auditorium.screenHeight - 0.6,
-    auditorium.screenWidth / (16 / 9),
-  );
-  const videoWidth = auditorium.screenWidth - 0.45;
+  const screenAspect = auditorium.screenWidth / auditorium.screenHeight;
+  const videoAspect = 16 / 9;
+
+  useEffect(() => {
+    if (videoAspect > screenAspect) {
+      const visibleWidth = screenAspect / videoAspect;
+      texture.repeat.set(visibleWidth, 1);
+      texture.offset.set((1 - visibleWidth) / 2, 0);
+    } else {
+      const visibleHeight = videoAspect / screenAspect;
+      texture.repeat.set(1, visibleHeight);
+      texture.offset.set(0, (1 - visibleHeight) / 2);
+    }
+    texture.needsUpdate = true;
+  }, [screenAspect, texture, videoAspect]);
+
   const geometry = useMemo(
     () =>
       createCurvedScreenGeometry(
-        videoWidth,
-        videoHeight,
+        auditorium.screenWidth,
+        auditorium.screenHeight,
         auditorium.screenSurface.curvatureDepth,
       ),
-    [auditorium.screenSurface.curvatureDepth, videoHeight, videoWidth],
+    [
+      auditorium.screenHeight,
+      auditorium.screenSurface.curvatureDepth,
+      auditorium.screenWidth,
+    ],
   );
 
   useEffect(() => () => geometry.dispose(), [geometry]);
@@ -544,9 +545,9 @@ function VideoSurface({
     >
       <primitive object={geometry} attach="geometry" />
       <meshBasicMaterial
-        map={active ? texture : null}
-        color={active ? "#ffffff" : "#c9c8c2"}
-        toneMapped={!active}
+        map={texture}
+        color="#ffffff"
+        toneMapped={false}
       />
     </mesh>
   );
@@ -573,7 +574,7 @@ function Screen({
         />
         <meshStandardMaterial color="#111315" roughness={0.9} />
       </mesh>
-      <SilverScreenSurface auditorium={auditorium} dimmed={filmMode} />
+      <ScreenSurface auditorium={auditorium} blackout={filmMode} />
       <VideoSurface
         auditorium={auditorium}
         active={filmMode && playing && filmSource === "local-demo"}
