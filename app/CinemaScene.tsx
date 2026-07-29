@@ -880,24 +880,24 @@ function Seats({
   const seatColors = useMemo(
     () => ({
       available: {
-        upholstery: new Color("#c62b3d"),
-        shell: new Color("#b12535"),
-        panel: new Color("#a62231"),
+        upholstery: new Color("#94183b"),
+        shell: new Color("#74132f"),
+        panel: new Color("#611027"),
       },
       selected: {
-        upholstery: new Color("#d85049"),
-        shell: new Color("#ad3936"),
-        panel: new Color("#a63233"),
+        upholstery: new Color("#c63b5c"),
+        shell: new Color("#922341"),
+        panel: new Color("#7b1b36"),
       },
       occupied: {
-        upholstery: new Color("#5c1820"),
-        shell: new Color("#51131b"),
-        panel: new Color("#4b1118"),
+        upholstery: new Color("#470c20"),
+        shell: new Color("#360817"),
+        panel: new Color("#2e0613"),
       },
       hovered: {
-        upholstery: new Color("#b6323a"),
-        shell: new Color("#962831"),
-        panel: new Color("#8a222a"),
+        upholstery: new Color("#ab2449"),
+        shell: new Color("#801b38"),
+        panel: new Color("#6c162f"),
       },
     }),
     [],
@@ -1076,13 +1076,13 @@ function Seats({
         <primitive object={cushionGeometry} attach="geometry" />
         <meshPhysicalMaterial
           vertexColors
-          roughness={0.8}
+          roughness={0.76}
           metalness={0}
-          emissive="#430008"
-          emissiveIntensity={0.28}
-          sheen={0.45}
-          sheenColor="#5a1019"
-          sheenRoughness={0.86}
+          emissive="#25000e"
+          emissiveIntensity={0.16}
+          sheen={0.58}
+          sheenColor="#c43d61"
+          sheenRoughness={0.78}
         />
       </instancedMesh>
       <instancedMesh
@@ -1096,13 +1096,13 @@ function Seats({
         <primitive object={backGeometry} attach="geometry" />
         <meshPhysicalMaterial
           vertexColors
-          roughness={0.74}
+          roughness={0.78}
           metalness={0}
-          emissive="#400007"
-          emissiveIntensity={0.28}
-          sheen={0.4}
-          sheenColor="#3c0c12"
-          sheenRoughness={0.9}
+          emissive="#21000c"
+          emissiveIntensity={0.14}
+          sheen={0.34}
+          sheenColor="#8d2945"
+          sheenRoughness={0.86}
         />
       </instancedMesh>
       <instancedMesh
@@ -1116,13 +1116,13 @@ function Seats({
         <primitive object={backGeometry} attach="geometry" />
         <meshPhysicalMaterial
           vertexColors
-          roughness={0.82}
+          roughness={0.78}
           metalness={0}
-          emissive="#430008"
-          emissiveIntensity={0.28}
-          sheen={0.5}
-          sheenColor="#5a1019"
-          sheenRoughness={0.84}
+          emissive="#25000e"
+          emissiveIntensity={0.16}
+          sheen={0.62}
+          sheenColor="#c43d61"
+          sheenRoughness={0.76}
         />
       </instancedMesh>
       <instancedMesh
@@ -1134,11 +1134,11 @@ function Seats({
           vertexColors
           roughness={0.84}
           metalness={0}
-          emissive="#400007"
-          emissiveIntensity={0.26}
-          sheen={0.34}
-          sheenColor="#4f0e17"
-          sheenRoughness={0.88}
+          emissive="#21000c"
+          emissiveIntensity={0.13}
+          sheen={0.3}
+          sheenColor="#84233e"
+          sheenRoughness={0.86}
         />
       </instancedMesh>
       <instancedMesh
