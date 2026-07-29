@@ -1074,10 +1074,17 @@ function Seats({
         onPointerOut={() => setHoveredSeatId(null)}
       >
         <primitive object={cushionGeometry} attach="geometry" />
-        <meshLambertMaterial
+        <meshPhysicalMaterial
           vertexColors
+          roughness={0.93}
+          metalness={0}
           emissive="#7a1236"
-          emissiveIntensity={0.35}
+          emissiveIntensity={0.3}
+          specularIntensity={0.025}
+          specularColor="#6f1732"
+          sheen={0.14}
+          sheenColor="#a53252"
+          sheenRoughness={0.98}
         />
       </instancedMesh>
       <instancedMesh
@@ -1089,10 +1096,17 @@ function Seats({
         onPointerOut={() => setHoveredSeatId(null)}
       >
         <primitive object={backGeometry} attach="geometry" />
-        <meshLambertMaterial
+        <meshPhysicalMaterial
           vertexColors
+          roughness={0.95}
+          metalness={0}
           emissive="#65102e"
-          emissiveIntensity={0.3}
+          emissiveIntensity={0.27}
+          specularIntensity={0.02}
+          specularColor="#5c122a"
+          sheen={0.05}
+          sheenColor="#862642"
+          sheenRoughness={1}
         />
       </instancedMesh>
       <instancedMesh
@@ -1104,10 +1118,17 @@ function Seats({
         onPointerOut={() => setHoveredSeatId(null)}
       >
         <primitive object={backGeometry} attach="geometry" />
-        <meshLambertMaterial
+        <meshPhysicalMaterial
           vertexColors
+          roughness={0.93}
+          metalness={0}
           emissive="#7a1236"
-          emissiveIntensity={0.35}
+          emissiveIntensity={0.3}
+          specularIntensity={0.025}
+          specularColor="#6f1732"
+          sheen={0.16}
+          sheenColor="#a53252"
+          sheenRoughness={0.98}
         />
       </instancedMesh>
       <instancedMesh
@@ -1115,10 +1136,17 @@ function Seats({
         args={[undefined, undefined, seats.length * 2]}
       >
         <primitive object={sidePanelGeometry} attach="geometry" />
-        <meshLambertMaterial
+        <meshPhysicalMaterial
           vertexColors
+          roughness={0.95}
+          metalness={0}
           emissive="#65102e"
-          emissiveIntensity={0.3}
+          emissiveIntensity={0.27}
+          specularIntensity={0.02}
+          specularColor="#5c122a"
+          sheen={0.08}
+          sheenColor="#862642"
+          sheenRoughness={1}
         />
       </instancedMesh>
       <instancedMesh
