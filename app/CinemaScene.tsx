@@ -3,7 +3,7 @@
 /* Three.js cameras, renderers and materials are intentionally mutable. */
 /* eslint-disable react-hooks/immutability */
 
-import { Canvas, type ThreeEvent, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   AmbientLight,
   Color,
@@ -59,7 +59,6 @@ type CinemaSceneProps = {
   filmSource: FilmSource;
   viewCommand: ViewCommand;
   isMobile: boolean;
-  onSelectSeat: (seat: Seat) => void;
 };
 
 const upVector = new Vector3(0, 1, 0);
@@ -869,10 +868,9 @@ function Seats({
   seats,
   selectedSeat,
   filmMode,
-  onSelectSeat,
 }: Pick<
   CinemaSceneProps,
-  "seats" | "selectedSeat" | "filmMode" | "onSelectSeat"
+  "seats" | "selectedSeat" | "filmMode"
 >) {
   const cushionRef = useRef<InstancedMesh>(null);
   const backRef = useRef<InstancedMesh>(null);
@@ -886,7 +884,6 @@ function Seats({
   const cupHolderRef = useRef<InstancedMesh>(null);
   const legRef = useRef<InstancedMesh>(null);
   const footRef = useRef<InstancedMesh>(null);
-  const [hoveredSeatId, setHoveredSeatId] = useState<string | null>(null);
   const matrix = useMemo(() => new Matrix4(), []);
   const seatObject = useMemo(() => new Object3D(), []);
   const cushionGeometry = useMemo(
@@ -921,11 +918,6 @@ function Seats({
         upholstery: new Color("#65162f"),
         shell: new Color("#4f1025"),
         panel: new Color("#420c1e"),
-      },
-      hovered: {
-        upholstery: new Color("#c63a60"),
-        shell: new Color("#9d2948"),
-        panel: new Color("#86203b"),
       },
     }),
     [],
@@ -1072,11 +1064,9 @@ function Seats({
       const colors =
         seat.id === selectedSeat.id
           ? seatColors.selected
-          : seat.id === hoveredSeatId
-            ? seatColors.hovered
-            : seat.status === "occupied"
-              ? seatColors.occupied
-              : seatColors.available;
+          : seat.status === "occupied"
+            ? seatColors.occupied
+            : seatColors.available;
       cushionRef.current?.setColorAt(index, colors.upholstery);
       backRef.current?.setColorAt(index, colors.upholstery);
       backShellRef.current?.setColorAt(index, colors.shell);
@@ -1092,7 +1082,7 @@ function Seats({
     ].forEach((mesh) => {
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     });
-  }, [hoveredSeatId, seatColors, seats, selectedSeat.id]);
+  }, [seatColors, seats, selectedSeat.id]);
 
   useFrame((_, delta) => {
     const factor = smoothFactor(delta);
@@ -1126,32 +1116,12 @@ function Seats({
     );
   });
 
-  const getSeatFromEvent = (event: ThreeEvent<PointerEvent>) => {
-    if (event.instanceId === undefined) return null;
-    return seats[event.instanceId] ?? null;
-  };
-
-  const handleClick = (event: ThreeEvent<MouseEvent>) => {
-    event.stopPropagation();
-    const seat = getSeatFromEvent(event as ThreeEvent<PointerEvent>);
-    if (seat?.status === "available") onSelectSeat(seat);
-  };
-
-  const handlePointerMove = (event: ThreeEvent<PointerEvent>) => {
-    event.stopPropagation();
-    const seat = getSeatFromEvent(event);
-    setHoveredSeatId(seat?.status === "available" ? seat.id : null);
-  };
-
   return (
     <group>
       <instancedMesh
         ref={cushionRef}
         args={[undefined, undefined, seats.length]}
         castShadow
-        onClick={handleClick}
-        onPointerMove={handlePointerMove}
-        onPointerOut={() => setHoveredSeatId(null)}
       >
         <primitive object={cushionGeometry} attach="geometry" />
         <meshPhysicalMaterial
@@ -1172,9 +1142,6 @@ function Seats({
         ref={backShellRef}
         args={[undefined, undefined, seats.length]}
         castShadow
-        onClick={handleClick}
-        onPointerMove={handlePointerMove}
-        onPointerOut={() => setHoveredSeatId(null)}
       >
         <primitive object={backGeometry} attach="geometry" />
         <meshPhysicalMaterial
@@ -1195,9 +1162,6 @@ function Seats({
         ref={backRef}
         args={[undefined, undefined, seats.length]}
         castShadow
-        onClick={handleClick}
-        onPointerMove={handlePointerMove}
-        onPointerOut={() => setHoveredSeatId(null)}
       >
         <primitive object={backGeometry} attach="geometry" />
         <meshPhysicalMaterial
@@ -1404,7 +1368,6 @@ function SceneContents(props: CinemaSceneProps) {
         seats={props.seats}
         selectedSeat={props.selectedSeat}
         filmMode={filmMode}
-        onSelectSeat={props.onSelectSeat}
       />
       <CameraRig
         auditorium={auditorium}

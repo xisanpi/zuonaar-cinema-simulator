@@ -192,7 +192,6 @@ export function CinemaExperience({
             filmSource={filmSource}
             viewCommand={viewCommand}
             isMobile={isMobile}
-            onSelectSeat={selectSeat}
           />
 
           <div className="scene-status" aria-live="polite">
