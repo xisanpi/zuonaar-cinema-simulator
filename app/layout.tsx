@@ -32,14 +32,14 @@ export async function generateMetadata(): Promise<Metadata> {
       template: "%s | 坐哪儿",
     },
     description:
-      "选一张真实座位，从人眼视角预览银幕大小、视线角度与放映氛围。",
+      "按城市、IMAX / 杜比制式、银幕大小和距离选择影院，再从座位人眼视角预览观影体验。",
     icons: {
       icon: "/favicon.svg",
       shortcut: "/favicon.svg",
     },
     openGraph: {
       title: "坐哪儿 | 影院视野模拟器",
-      description: "先看一眼，再决定坐哪儿。",
+      description: "先选影院，再看这个座位。",
       type: "website",
       locale: "zh_CN",
       images: [{ url: socialImage, width: 1200, height: 630 }],
@@ -47,7 +47,7 @@ export async function generateMetadata(): Promise<Metadata> {
     twitter: {
       card: "summary_large_image",
       title: "坐哪儿 | 影院视野模拟器",
-      description: "先看一眼，再决定坐哪儿。",
+      description: "先选影院，再看这个座位。",
       images: [socialImage],
     },
   };

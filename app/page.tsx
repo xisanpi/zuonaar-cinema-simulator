@@ -1,5 +1,5 @@
-import { CinemaExperience } from "./CinemaExperience";
+import { CinemaFinder } from "./CinemaFinder";
 
 export default function Home() {
-  return <CinemaExperience />;
+  return <CinemaFinder />;
 }

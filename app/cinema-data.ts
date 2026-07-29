@@ -1,3 +1,10 @@
+import {
+  cinemaListings,
+  getCinemaListingByHallId,
+  inventoryHalls,
+  type InventoryHall,
+} from "./cinema-inventory";
+
 export type SeatStatus = "available" | "occupied";
 export type FilmSource = "local-demo" | "imax-countdown";
 
@@ -45,89 +52,109 @@ export type Cinema = {
   city: string;
   name: string;
   address: string;
+  latitude: number | null;
+  longitude: number | null;
 };
 
-export const cinemas: Cinema[] = [
-  {
-    id: "cnfm",
-    city: "北京",
-    name: "中国电影博物馆",
-    address: "朝阳区南影路 9 号",
-  },
-  {
-    id: "peace",
-    city: "上海",
-    name: "和平影都",
-    address: "黄浦区西藏中路 290 号",
-  },
-];
+function approximateRows(hall: InventoryHall) {
+  const screenWidth = hall.width ?? 18;
+  const sourceSeats = hall.seats ?? 200;
+  const rowCount = Math.max(8, Math.min(14, Math.round(sourceSeats / 22)));
+  const maximumAcross = Math.max(
+    14,
+    Math.min(26, Math.round(screenWidth / 1.08)),
+  );
+  const averageAcross = Math.max(
+    14,
+    Math.min(maximumAcross, Math.round(sourceSeats / rowCount)),
+  );
 
-export const auditoriums: Auditorium[] = [
-  {
-    id: "cnfm-imax",
-    cinemaId: "cnfm",
-    name: "IMAX GT 厅",
-    format: "IMAX GT Laser 1.43:1",
-    screenWidth: 27.6,
-    screenHeight: 19.3,
+  return Array.from({ length: rowCount }, (_, row) => {
+    const progression = Math.round((row / Math.max(rowCount - 1, 1)) * 4 - 2);
+    const count = Math.max(12, Math.min(maximumAcross, averageAcross + progression));
+    return count % 2 === 0 ? count : count + 1;
+  });
+}
+
+function projectionDetails(hall: InventoryHall) {
+  const details = [
+    hall.projection || hall.brand,
+    hall.ratio ? `${hall.ratio} 银幕比例` : "银幕比例待补",
+    hall.seats ? `${hall.seats} 个登记座位` : "座位数待补",
+  ];
+
+  if (hall.brand === "Dolby Cinema") {
+    details.push("Dolby Atmos 沉浸式音效");
+  } else {
+    details.push("IMAX 专用音响系统");
+  }
+
+  return details;
+}
+
+function hallToAuditorium(hall: InventoryHall): Auditorium {
+  const cinema = getCinemaListingByHallId(hall.id);
+  const screenWidth = hall.width ?? 18;
+  const screenHeight =
+    hall.height ??
+    (hall.ratio
+      ? screenWidth /
+        Math.max(Number.parseFloat(hall.ratio.split(":")[0]), 1.43)
+      : screenWidth / 1.9);
+  const rowSeatCounts = approximateRows(hall);
+
+  return {
+    id: hall.id,
+    cinemaId: cinema?.id ?? `cinema-${hall.id}`,
+    name: `${hall.brand} 厅`,
+    format: `${hall.brand} · ${hall.projection || "放映技术待补"}`,
+    screenWidth,
+    screenHeight,
     screenBottom: 1.5,
-    screenZ: -19,
-    screenAspect: "1.43:1 满幅",
-    projectionTechnology: "IMAX GT Laser",
-    projectionDetails: ["双机 4K 激光", "1.43:1 满幅支持", "12 声道 IMAX 音响"],
+    screenZ: -Math.max(18, screenWidth * 0.72),
+    screenAspect: hall.ratio || "比例待补",
+    projectionTechnology: hall.projection || hall.brand,
+    projectionDetails: projectionDetails(hall),
     screenSurface: {
-      name: "宽视角白色增益幕（模拟）",
-      gain: 1.4,
-      halfGainAngle: 85,
+      name: "高增益穿孔银幕（光学模拟）",
+      gain: hall.brand === "IMAX" ? 1.4 : 1.2,
+      halfGainAngle: hall.brand === "IMAX" ? 85 : 90,
       perforationMm: 0.9,
       openAreaPercent: 4.16,
-      curvatureDepth: 0.33,
+      curvatureDepth: Math.min(0.42, screenWidth / 90),
     },
-    rowCount: 10,
-    rowSpacing: 1.85,
-    rowRise: 0.52,
+    rowCount: rowSeatCounts.length,
+    rowSpacing: 1.72,
+    rowRise: 0.48,
     firstRowZ: -3.8,
-    rowSeatCounts: [14, 16, 18, 18, 20, 20, 22, 22, 22, 22],
-    sourceNote: "公开规格参考与样例座位布局，不代表影院官方测绘",
-  },
-  {
-    id: "peace-imax",
-    cinemaId: "peace",
-    name: "IMAX 厅",
-    format: "IMAX 1.90:1",
-    screenWidth: 20.5,
-    screenHeight: 10.8,
-    screenBottom: 2.2,
-    screenZ: -18,
-    screenAspect: "1.90:1",
-    projectionTechnology: "IMAX Laser",
-    projectionDetails: ["4K 激光放映", "1.90:1 画幅", "IMAX 多声道音响"],
-    screenSurface: {
-      name: "宽视角白色增益幕（模拟）",
-      gain: 1.4,
-      halfGainAngle: 85,
-      perforationMm: 0.9,
-      openAreaPercent: 4.16,
-      curvatureDepth: 0.24,
-    },
-    rowCount: 10,
-    rowSpacing: 1.7,
-    rowRise: 0.46,
-    firstRowZ: -4.2,
-    rowSeatCounts: [12, 14, 16, 16, 18, 18, 20, 20, 20, 20],
-    sourceNote: "公开规格参考与样例座位布局，不代表影院官方测绘",
-  },
-];
+    rowSeatCounts,
+    sourceNote:
+      "银幕规格、放映制式与容量来自公开数据库；座位几何为容量近似，不代表影院官方测绘",
+  };
+}
+
+export const cinemas: Cinema[] = cinemaListings.map((cinema) => ({
+  id: cinema.id,
+  city: cinema.city,
+  name: cinema.name,
+  address: cinema.address,
+  latitude: cinema.latitude,
+  longitude: cinema.longitude,
+}));
+
+export const auditoriums: Auditorium[] = inventoryHalls.map(hallToAuditorium);
+
+export function getAuditoriumById(id: string) {
+  const legacyId = id === "cnfm-imax" ? "hall-0019" : id;
+  return auditoriums.find((auditorium) => auditorium.id === legacyId);
+}
 
 const occupiedSeatIds = new Set([
-  "cnfm-imax-C-5",
-  "cnfm-imax-C-6",
-  "cnfm-imax-F-13",
-  "cnfm-imax-G-3",
-  "cnfm-imax-H-18",
-  "peace-imax-D-4",
-  "peace-imax-G-11",
-  "peace-imax-H-7",
+  "hall-0019-C-5",
+  "hall-0019-C-6",
+  "hall-0019-F-13",
+  "hall-0019-G-3",
+  "hall-0019-H-18",
 ]);
 
 export function buildSeats(auditorium: Auditorium): Seat[] {

@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import {
   ArrowDown,
   ArrowLeft,
@@ -19,6 +20,7 @@ import {
   auditoriums,
   buildSeats,
   cinemas,
+  getAuditoriumById,
   getSeatMetrics,
   type FilmSource,
   type Seat,
@@ -58,10 +60,16 @@ function getDefaultSeatId(auditoriumId: string) {
   ).id;
 }
 
-export function CinemaExperience() {
-  const [auditoriumId, setAuditoriumId] = useState(auditoriums[0].id);
+export function CinemaExperience({
+  initialAuditoriumId,
+}: {
+  initialAuditoriumId?: string;
+}) {
+  const initialAuditorium =
+    getAuditoriumById(initialAuditoriumId ?? "") ?? auditoriums[0];
+  const [auditoriumId, setAuditoriumId] = useState(initialAuditorium.id);
   const [selectedSeatId, setSelectedSeatId] = useState(() =>
-    getDefaultSeatId(auditoriums[0].id),
+    getDefaultSeatId(initialAuditorium.id),
   );
   const [viewMode, setViewMode] = useState<ViewMode>("seat");
   const [filmMode, setFilmMode] = useState(false);
@@ -103,13 +111,6 @@ export function CinemaExperience() {
     setViewMode("seat");
   };
 
-  const selectCinema = (cinemaId: string) => {
-    const nextAuditorium = auditoriums.find(
-      (item) => item.cinemaId === cinemaId,
-    );
-    if (nextAuditorium) switchAuditorium(nextAuditorium.id);
-  };
-
   const selectSeat = (seat: Seat) => {
     if (seat.status === "occupied") return;
     setSelectedSeatId(seat.id);
@@ -135,7 +136,7 @@ export function CinemaExperience() {
   return (
     <main className="cinema-app">
       <header className="topbar">
-        <a className="brand" href="#" aria-label="坐哪儿首页">
+        <Link className="brand" href="/" aria-label="返回坐哪儿影院列表">
           <span className="brand-mark">
             <FilmSlate size={22} weight="fill" />
           </span>
@@ -143,22 +144,21 @@ export function CinemaExperience() {
             <strong>坐哪儿</strong>
             <small>影院视野模拟器</small>
           </span>
-        </a>
+        </Link>
 
-        <div className="venue-controls" aria-label="影院选择">
-          <label className="select-field">
-            <span>影院</span>
-            <select
-              value={cinema.id}
-              onChange={(event) => selectCinema(event.target.value)}
-            >
-              {cinemas.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.city} · {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
+        <div
+          className="venue-controls detail-controls"
+          aria-label="当前影院与影厅"
+        >
+          <Link className="back-to-cinemas" href="/">
+            <ArrowLeft size={18} />
+            <span>
+              <small>返回</small>
+              <strong>
+                {cinema.city} · {cinema.name}
+              </strong>
+            </span>
+          </Link>
           <label className="select-field">
             <span>影厅</span>
             <select
