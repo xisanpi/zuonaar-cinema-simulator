@@ -11,10 +11,53 @@ const sourcePath = path.join(
   "docs",
   "全国_IMAX_杜比影院_座位排列.json",
 );
+const priorityPlanPath = path.join(
+  root,
+  "docs",
+  "首批300影厅覆盖计划.json",
+);
 const outputPath = path.join(root, "app", "seat-layouts.json");
 
-const inventory = JSON.parse(await readFile(inventoryPath, "utf8"));
+let inventory = JSON.parse(await readFile(inventoryPath, "utf8"));
 const capture = JSON.parse(await readFile(sourcePath, "utf8"));
+const priorityPlan = JSON.parse(await readFile(priorityPlanPath, "utf8"));
+const priorityBySourceKey = new Map(
+  priorityPlan.records.map((record) => [
+    `${record.inventory_name}::${record.brand}`,
+    record,
+  ]),
+);
+inventory = inventory.filter((hall) => hall.brand !== "Other PLF");
+const otherPlfHalls = capture.records
+  .filter((record) => record.brand === "Other PLF")
+  .map((record) => ({
+    id: `hall-plf-${record.maoyan_cinema_id}`,
+    name: record.inventory_name,
+    brand: record.brand,
+    projection: record.projection || "精选巨幕",
+    city: record.city || "",
+    address: record.address || "",
+    width: null,
+    height: null,
+    area: null,
+    ratio: "",
+    seats: record.physical_seats,
+    status: "在册",
+    latitude: null,
+    longitude: null,
+    sourceUrl: record.source_url,
+}));
+inventory.push(...otherPlfHalls);
+inventory = inventory.map((hall) => {
+  const priority = priorityBySourceKey.get(`${hall.name}::${hall.brand}`);
+  return {
+    ...hall,
+    isPriority: Boolean(priority),
+    priorityRank: priority?.target_id ?? null,
+    priorityScore: priority?.priority_score ?? null,
+  };
+});
+await writeFile(inventoryPath, JSON.stringify(inventory), "utf8");
 const hallsBySourceKey = new Map(
   inventory.map((hall) => [`${hall.name}::${hall.brand}`, hall]),
 );
@@ -38,6 +81,9 @@ for (const record of capture.records) {
     hallName: record.hall_name,
     capturedAt: capture.generated_at,
     sourceUrl: record.source_url,
+    isPriority: Boolean(priorityBySourceKey.get(sourceKey)),
+    priorityRank: priorityBySourceKey.get(sourceKey)?.target_id ?? null,
+    priorityScore: priorityBySourceKey.get(sourceKey)?.priority_score ?? null,
     rows: record.rows.map((row) => ({
       label: String(row.row_id),
       cells: row.cells.map((cell) => [

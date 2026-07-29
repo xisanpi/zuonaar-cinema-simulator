@@ -1,6 +1,6 @@
 import inventoryJson from "./cinema-inventory.json";
 
-export type PremiumFormat = "IMAX" | "Dolby Cinema";
+export type PremiumFormat = "IMAX" | "Dolby Cinema" | "Other PLF";
 
 export type InventoryHall = {
   id: string;
@@ -18,6 +18,9 @@ export type InventoryHall = {
   latitude: number | null;
   longitude: number | null;
   sourceUrl: string;
+  isPriority: boolean;
+  priorityRank: number | null;
+  priorityScore: number | null;
 };
 
 export type CinemaListing = {
@@ -32,6 +35,7 @@ export type CinemaListing = {
   formats: PremiumFormat[];
   largestScreenArea: number | null;
   featuredHall: InventoryHall;
+  priorityRank: number | null;
 };
 
 export type CitySummary = {
@@ -71,9 +75,18 @@ function buildListings() {
   }
 
   return Array.from(groups.values()).map<CinemaListing>((halls) => {
-    const sortedHalls = [...halls].sort(
-      (left, right) => screenArea(right) - screenArea(left),
-    );
+    const sortedHalls = [...halls].sort((left, right) => {
+      if (left.isPriority !== right.isPriority) {
+        return left.isPriority ? -1 : 1;
+      }
+      if (left.priorityRank !== right.priorityRank) {
+        return (
+          (left.priorityRank ?? Number.POSITIVE_INFINITY) -
+          (right.priorityRank ?? Number.POSITIVE_INFINITY)
+        );
+      }
+      return screenArea(right) - screenArea(left);
+    });
     const featuredHall = sortedHalls[0];
     const locationHall =
       halls.find(
@@ -92,8 +105,12 @@ function buildListings() {
       formats: Array.from(
         new Set(sortedHalls.map((hall) => hall.brand)),
       ) as PremiumFormat[],
-      largestScreenArea: screenArea(featuredHall) || null,
+      largestScreenArea:
+        Math.max(...sortedHalls.map((hall) => screenArea(hall))) || null,
       featuredHall,
+      priorityRank:
+        sortedHalls.find((hall) => hall.priorityRank !== null)?.priorityRank ??
+        null,
     };
   });
 }

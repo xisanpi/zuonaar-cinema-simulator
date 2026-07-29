@@ -67,8 +67,17 @@ const countdownPreviewEmbed = `https://player.vimeo.com/video/${countdownPreview
 const countdownPreviewWidth = 1440;
 const countdownPreviewHeight = 1080;
 const lightingTransitionSpeed = 3.2;
+const cameraHorizontalFov = 62;
 const smoothFactor = (delta: number) =>
   1 - Math.exp(-lightingTransitionSpeed * delta);
+const verticalFovForAspect = (aspect: number) =>
+  (2 *
+    Math.atan(
+      Math.tan((cameraHorizontalFov * Math.PI) / 360) /
+        Math.max(aspect, 0.1),
+    ) *
+    180) /
+  Math.PI;
 const tuneSeatMaterial = (
   material: MeshPhysicalMaterial | null,
   factor: number,
@@ -377,7 +386,7 @@ function CameraRig({
   CinemaSceneProps,
   "auditorium" | "selectedSeat" | "viewCommand"
 >) {
-  const { camera, gl } = useThree();
+  const { camera, gl, size } = useThree();
   const desiredPosition = useRef(new Vector3());
   const desiredEuler = useRef(new Euler(0, 0, 0, "YXZ"));
   const desiredQuaternion = useRef(new Quaternion());
@@ -402,10 +411,10 @@ function CameraRig({
     desiredEuler.current.setFromQuaternion(quaternion, "YXZ");
 
     if (camera instanceof PerspectiveCamera) {
-      camera.fov = 66;
+      camera.fov = verticalFovForAspect(size.width / size.height);
       camera.updateProjectionMatrix();
     }
-  }, [auditorium, camera, selectedSeat]);
+  }, [auditorium, camera, selectedSeat, size.height, size.width]);
 
   useEffect(() => {
     if (viewCommand.token === 0) return;
@@ -1410,7 +1419,7 @@ export function CinemaScene(props: CinemaSceneProps) {
         dpr={props.isMobile ? [1, 1.35] : [1, 1.75]}
         camera={{
           position: initialCameraPosition,
-          fov: 66,
+          fov: 60,
           near: 0.1,
           far: 120,
         }}

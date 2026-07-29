@@ -34,9 +34,12 @@ test("server-renders the cinema discovery page", async () => {
   assert.match(html, /银幕从大到小/);
   assert.match(html, /距离从近到远/);
   assert.match(html, /杜比影院/);
+  assert.match(html, /精选巨幕/);
   assert.match(html, /进入影厅/);
   assert.match(html, /中国电影博物馆/);
   assert.match(html, /我的位置/);
+  assert.match(html, /先看视野，再决定坐哪儿。/);
+  assert.doesNotMatch(html, /在坐下之前，先看清这块银幕。/);
   assert.doesNotMatch(html, /codex-preview/);
   assert.doesNotMatch(html, /Your site is taking shape/);
 });
@@ -50,9 +53,11 @@ test("server-renders a selected auditorium simulator", async () => {
   assert.match(html, /中国电影博物馆/);
   assert.match(html, /幕面光学模型/);
   assert.match(html, /IMAX Laser Countdown（在线）/);
-  assert.match(html, /H 排 12 座/);
-  assert.match(html, /估算座位排列/);
-  assert.match(html, /当前没有实际选座图，按登记容量生成/);
+  assert.match(html, /真实座位排列/);
+  assert.match(html, /role="tab"[^>]*>选座</);
+  assert.match(html, /role="tab"[^>]*>影院信息</);
+  assert.doesNotMatch(html, /逐排座号、空槽与过道来自实际选座页面/);
+  assert.doesNotMatch(html, /返回坐哪儿影院列表/);
   assert.match(html, /返回/);
   assert.doesNotMatch(html, /自由视角/);
   assert.doesNotMatch(html, /从这里看/);
@@ -65,7 +70,7 @@ test("labels captured seat layouts explicitly", async () => {
 
   const html = await response.text();
   assert.match(html, /真实座位排列/);
-  assert.match(html, /逐排座号、空槽与过道来自实际选座页面/);
+  assert.doesNotMatch(html, /逐排座号、空槽与过道来自实际选座页面/);
 });
 
 test("unknown auditoriums return not found", async () => {
@@ -81,7 +86,15 @@ test("captured seat layouts map cleanly to inventory halls", async () => {
   const inventoryIds = new Set(inventory.map((hall) => hall.id));
   const layouts = Object.entries(seatLayoutData.layouts);
 
-  assert.equal(layouts.length, 51);
+  assert.equal(
+    layouts.filter(([, layout]) => layout.isPriority).length,
+    300,
+    "exactly 300 captured layouts should be in the first-priority scope",
+  );
+  assert.ok(
+    layouts.length >= 300,
+    "retained lower-priority captures should not reduce first-priority coverage",
+  );
 
   for (const [hallId, layout] of layouts) {
     assert.equal(inventoryIds.has(hallId), true, `${hallId} is not in inventory`);

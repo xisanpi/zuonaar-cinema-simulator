@@ -1,0 +1,266 @@
+{
+  "generated_at": "2026-07-29",
+  "selection_rule": "每个重点城市选择一个当前选座页明确标注 CINITY、CINITY LED 或 CGS 中国巨幕的影厅；不以影院名称中的泛化“巨幕”字样作为唯一依据。",
+  "records": [
+    {
+      "city": "北京",
+      "cinema_id": 42017,
+      "cinema_name": "北京沃美影城喜隆多店(CINITY LED·WMX杜比全景声)",
+      "hall_name": "7号CINITY LED厅-儿童需购票",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "09:10",
+      "seq_no": "202607300009776"
+    },
+    {
+      "city": "上海",
+      "cinema_id": 25345,
+      "cinema_name": "中影国际影城（青浦富绅时代CINITY LED店）",
+      "hall_name": "8号CINITYLED（此厅儿童需购票）",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "10:40",
+      "seq_no": "202607300253671"
+    },
+    {
+      "city": "广州",
+      "cinema_id": 2505,
+      "cinema_name": "中影国际影城（天河领展广场CINITY店）",
+      "hall_name": "6号4K120帧杜比全景声CINITY厅",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "10:30",
+      "seq_no": "202607300059671"
+    },
+    {
+      "city": "深圳",
+      "cinema_id": 39964,
+      "cinema_name": "海岸影城（万丰CINITY LED店）",
+      "hall_name": "1号厅（CINITY LED厅）",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "10:30",
+      "seq_no": "202607300034141"
+    },
+    {
+      "city": "成都",
+      "cinema_id": 41716,
+      "cinema_name": "太平洋影城CINITY LED（东来印象旗舰店）",
+      "hall_name": "1号4K120帧CLED透声屏儿童需购票",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "09:25",
+      "seq_no": "202607300390492"
+    },
+    {
+      "city": "重庆",
+      "cinema_id": 6072,
+      "cinema_name": "横店电影城（长寿凯谊广场cinity店）",
+      "hall_name": "顶固高端定制厅",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "09:45",
+      "seq_no": "202607300384094"
+    },
+    {
+      "city": "杭州",
+      "cinema_id": 23932,
+      "cinema_name": "中影国际影城（盛德国际广场CINITY LED店）",
+      "hall_name": "1号CINITY LED（透声屏）厅",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "11:00",
+      "seq_no": "202607300047196"
+    },
+    {
+      "city": "南京",
+      "cinema_id": 16297,
+      "cinema_name": "万达影城（江宁太阳城CINITY店）",
+      "hall_name": "6号CINITY厅（儿童需购票）",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "11:00",
+      "seq_no": "202607300020130"
+    },
+    {
+      "city": "武汉",
+      "cinema_id": 910,
+      "cinema_name": "中影国际影城（光谷步行街天河CINITY LED店）",
+      "hall_name": "1号CINITY 杜比全景声厅",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "11:10",
+      "seq_no": "202607300408270"
+    },
+    {
+      "city": "西安",
+      "cinema_id": 14448,
+      "cinema_name": "奥斯卡阳光国际影城（CINITY/CGS中国巨幕店）",
+      "hall_name": "CGS中国巨幕厅",
+      "format": "巨幕2D",
+      "session_date": "2026-07-30",
+      "session_time": "11:30",
+      "seq_no": "202607300202652"
+    },
+    {
+      "city": "天津",
+      "cinema_id": 38750,
+      "cinema_name": "完美世界影城（天津环宇城CINITY店）",
+      "hall_name": "1号CINITY杜比全景声厅",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "10:20",
+      "seq_no": "202607300201580"
+    },
+    {
+      "city": "苏州",
+      "cinema_id": 28750,
+      "cinema_name": "SFC上影影城（尹山湖CINITY LED店）",
+      "hall_name": "1号VIP CINITY LED透声屏 (儿童需购票）",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "11:00",
+      "seq_no": "202607300018608"
+    },
+    {
+      "city": "青岛",
+      "cinema_id": 1119,
+      "cinema_name": "青岛西海岸电影城CINITY LED（家佳源店）",
+      "hall_name": "【重磅升级】5号 CINITY LED +杜比全景声",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "09:40",
+      "seq_no": "202607300000608"
+    },
+    {
+      "city": "济南",
+      "cinema_id": 37498,
+      "cinema_name": "中影南方影城（弘阳广场CINITY店）",
+      "hall_name": "8号CINITY厅（B2停车至高免费3小时）",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "09:35",
+      "seq_no": "202607300270734"
+    },
+    {
+      "city": "厦门",
+      "cinema_id": 37422,
+      "cinema_name": "万达影城（厦门灌口广场CINITY店）",
+      "hall_name": "8号CINITY厅",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "00:40",
+      "seq_no": "202607290550845"
+    },
+    {
+      "city": "福州",
+      "cinema_id": 36215,
+      "cinema_name": "福清福和万达广场CINITY店",
+      "hall_name": "6号CINITY厅",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "09:30",
+      "seq_no": "202607300005445"
+    },
+    {
+      "city": "昆明",
+      "cinema_id": 36200,
+      "cinema_name": "万达影城（呈贡万达广场CINITY店）",
+      "hall_name": "CINITY厅-扫码可领海报",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "09:30",
+      "seq_no": "202607300005899"
+    },
+    {
+      "city": "哈尔滨",
+      "cinema_id": 15514,
+      "cinema_name": "缘虹CINITY LED4K巨幕影城（道外店）",
+      "hall_name": "CINITY LED4K巨幕厅",
+      "format": "2D",
+      "session_date": "2026-08-09",
+      "session_time": "12:00",
+      "seq_no": "202608090005646"
+    },
+    {
+      "city": "长春",
+      "cinema_id": 41777,
+      "cinema_name": "万达影城（长春万达茂CINITY店）",
+      "hall_name": "3号CINITY厅免费停车【儿童需购票】",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "08:50",
+      "seq_no": "202607300014214"
+    },
+    {
+      "city": "南宁",
+      "cinema_id": 2393,
+      "cinema_name": "沃美影城万象城店（CINITY LED）",
+      "hall_name": "3号CINITY LED杜比全景声厅",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "00:30",
+      "seq_no": "202607290565396"
+    },
+    {
+      "city": "合肥",
+      "cinema_id": 41972,
+      "cinema_name": "合肥英嘉电影空间（方圆荟CINITY LED店）",
+      "hall_name": "1号CINITY LED-儿童需购票",
+      "format": "2D",
+      "session_date": "2026-07-30",
+      "session_time": "11:30",
+      "seq_no": "202607300014861"
+    },
+    {
+      "city": "宁波",
+      "cinema_id": 23688,
+      "cinema_name": "中影国际影城（姜山万达CINITY LED店）",
+      "hall_name": "8号CINITY_LED 巨幕厅",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "11:30",
+      "seq_no": "202607300023100"
+    },
+    {
+      "city": "东莞",
+      "cinema_id": 26080,
+      "cinema_name": "华夏CINITY影城（龙湾奥莱店）",
+      "hall_name": "6号120帧CINITY双激光厅-免费停车6小时",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "11:50",
+      "seq_no": "202607300329032"
+    },
+    {
+      "city": "佛山",
+      "cinema_id": 36405,
+      "cinema_name": "中影国际影城（CINITY顺德欢乐海岸店）",
+      "hall_name": "120帧CINITY巨幕厅+杜比全景声",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "11:20",
+      "seq_no": "202607300451428"
+    },
+    {
+      "city": "无锡",
+      "cinema_id": 39051,
+      "cinema_name": "苏宁影城（苏宁广场CINITY店）",
+      "hall_name": "1号CINITY特效厅-儿童需购票",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "00:10",
+      "seq_no": "202607290431425"
+    },
+    {
+      "city": "石家庄",
+      "cinema_id": 40768,
+      "cinema_name": "万达影城CINITY LED(勒泰广场店)",
+      "hall_name": "河北首家CINITY.LED沙发厅",
+      "format": "CINITY2D",
+      "session_date": "2026-07-30",
+      "session_time": "08:30",
+      "seq_no": "202607300058909"
+    }
+  ]
+}

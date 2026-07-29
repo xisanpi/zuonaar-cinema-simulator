@@ -3,11 +3,11 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
-  ArrowDown,
   ArrowLeft,
-  ArrowRight,
-  ArrowUp,
-  FilmSlate,
+  CaretDown,
+  CaretLeft,
+  CaretRight,
+  CaretUp,
   Moon,
   Pause,
   Play,
@@ -42,11 +42,8 @@ const CinemaScene = dynamic(
   },
 );
 
-type ViewCommand = {
-  yaw: number;
-  pitch: number;
-  token: number;
-};
+const idleViewCommand = { yaw: 0, pitch: 0, token: 0 };
+type MobilePanelTab = "seats" | "info";
 
 function getDefaultSeatId(auditoriumId: string) {
   const auditorium =
@@ -79,18 +76,21 @@ export function CinemaExperience({
   );
   const [filmMode, setFilmMode] = useState(false);
   const [playing, setPlaying] = useState(false);
-  const [filmSource, setFilmSource] = useState<FilmSource>("local-demo");
-  const [viewCommand, setViewCommand] = useState<ViewCommand>({
-    yaw: 0,
-    pitch: 0,
-    token: 0,
-  });
+  const [filmSource, setFilmSource] =
+    useState<FilmSource>("imax-countdown");
+  const [isSeatPanelCollapsed, setIsSeatPanelCollapsed] = useState(false);
+  const [isMobilePanelOpen, setIsMobilePanelOpen] = useState(false);
+  const [mobilePanelTab, setMobilePanelTab] =
+    useState<MobilePanelTab>("seats");
   const [isMobile, setIsMobile] = useState(false);
 
   const auditorium =
     auditoriums.find((item) => item.id === auditoriumId) ?? auditoriums[0];
   const cinema =
     cinemas.find((item) => item.id === auditorium.cinemaId) ?? cinemas[0];
+  const cinemaAuditoriums = auditoriums.filter(
+    (item) => item.cinemaId === cinema.id,
+  );
   const seats = useMemo(() => buildSeats(auditorium), [auditorium]);
   const selectedSeat =
     seats.find((seat) => seat.id === selectedSeatId) ??
@@ -100,7 +100,11 @@ export function CinemaExperience({
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)");
-    const update = () => setIsMobile(mediaQuery.matches);
+    const update = () => {
+      const nextIsMobile = mediaQuery.matches;
+      setIsMobile(nextIsMobile);
+      if (nextIsMobile) setIsSeatPanelCollapsed(false);
+    };
     update();
     mediaQuery.addEventListener("change", update);
     return () => mediaQuery.removeEventListener("change", update);
@@ -124,56 +128,24 @@ export function CinemaExperience({
     });
   };
 
-  const nudgeView = (yaw: number, pitch: number) => {
-    setViewCommand((current) => ({
-      yaw,
-      pitch,
-      token: current.token + 1,
-    }));
+  const showMobilePanelTab = (tab: MobilePanelTab) => {
+    setMobilePanelTab(tab);
+    setIsMobilePanelOpen(true);
   };
 
   return (
-    <main className="cinema-app">
-      <header className="topbar">
-        <Link className="brand" href="/" aria-label="返回坐哪儿影院列表">
-          <span className="brand-mark">
-            <FilmSlate size={22} weight="fill" />
-          </span>
-          <span>
-            <strong>坐哪儿</strong>
-            <small>影院视野模拟器</small>
-          </span>
-        </Link>
-
-        <div
-          className="venue-controls detail-controls"
-          aria-label="当前影院与影厅"
+    <main className="cinema-app" data-dbd-zone="cinema-shell">
+      <header className="topbar" data-dbd-zone="cinema-topbar">
+        <Link
+          className="back-to-cinemas"
+          href="/"
+          aria-label={`返回影院列表，当前影院：${cinema.city} ${cinema.name}`}
         >
-          <Link className="back-to-cinemas" href="/">
-            <ArrowLeft size={18} />
-            <span>
-              <small>返回</small>
-              <strong>
-                {cinema.city} · {cinema.name}
-              </strong>
-            </span>
-          </Link>
-          <label className="select-field">
-            <span>影厅</span>
-            <select
-              value={auditorium.id}
-              onChange={(event) => switchAuditorium(event.target.value)}
-            >
-              {auditoriums
-                .filter((item) => item.cinemaId === cinema.id)
-                .map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} · {item.format}
-                  </option>
-                ))}
-            </select>
-          </label>
-        </div>
+          <ArrowLeft size={20} />
+          <strong>
+            {cinema.city} · {cinema.name}
+          </strong>
+        </Link>
 
         <button
           className={`projection-toggle ${filmMode ? "is-active" : ""}`}
@@ -186,8 +158,13 @@ export function CinemaExperience({
         </button>
       </header>
 
-      <section className="experience-layout">
-        <div className="scene-shell">
+      <section
+        className={`experience-layout ${
+          isSeatPanelCollapsed ? "is-panel-collapsed" : ""
+        }`}
+        data-dbd-zone="cinema-workspace"
+      >
+        <div className="scene-shell" data-dbd-zone="cinema-scene">
           <CinemaScene
             auditorium={auditorium}
             seats={seats}
@@ -195,52 +172,16 @@ export function CinemaExperience({
             filmMode={filmMode}
             playing={playing}
             filmSource={filmSource}
-            viewCommand={viewCommand}
+            viewCommand={idleViewCommand}
             isMobile={isMobile}
           />
 
-          <div className="scene-status" aria-live="polite">
-            <span>{cinema.name}</span>
-            <strong>
-              {selectedSeat.rowLabel} 排 {selectedSeat.number} 座
-            </strong>
+          <div className="scene-seat-status" aria-live="polite">
+            {selectedSeat.rowLabel} 排 {selectedSeat.number} 座
           </div>
 
           <div className="scene-controls">
-            <div className="direction-pad" aria-label="调整视线">
-              <span />
-              <button
-                type="button"
-                aria-label="视线向上"
-                onClick={() => nudgeView(0, 0.08)}
-              >
-                <ArrowUp size={17} />
-              </button>
-              <span />
-              <button
-                type="button"
-                aria-label="视线向左"
-                onClick={() => nudgeView(0.09, 0)}
-              >
-                <ArrowLeft size={17} />
-              </button>
-              <button
-                type="button"
-                aria-label="视线向下"
-                onClick={() => nudgeView(0, -0.08)}
-              >
-                <ArrowDown size={17} />
-              </button>
-              <button
-                type="button"
-                aria-label="视线向右"
-                onClick={() => nudgeView(-0.09, 0)}
-              >
-                <ArrowRight size={17} />
-              </button>
-            </div>
-
-            <div className="film-picker">
+            <div className="film-picker" data-dbd-pattern="film-picker">
               <label htmlFor="film-source">影片</label>
               <select
                 id="film-source"
@@ -271,191 +212,310 @@ export function CinemaExperience({
             <button
               className="play-control"
               type="button"
+              data-dbd-component="button"
+              data-dbd-variant="icon-only"
               onClick={() => {
                 if (!filmMode) setFilmMode(true);
                 setPlaying((current) => !current);
               }}
               aria-pressed={playing}
+              aria-label={
+                playing
+                  ? "暂停影片"
+                  : filmSource === "imax-countdown"
+                    ? "播放倒计时"
+                    : "播放短片"
+              }
+              title={
+                playing
+                  ? "暂停影片"
+                  : filmSource === "imax-countdown"
+                    ? "播放倒计时"
+                    : "播放短片"
+              }
             >
               {playing ? (
                 <Pause size={20} weight="fill" />
               ) : (
                 <Play size={20} weight="fill" />
               )}
-              <span>
-                {playing
-                  ? "暂停"
-                  : filmSource === "imax-countdown"
-                    ? "播放倒计时"
-                    : "播放短片"}
-              </span>
             </button>
           </div>
 
           <p className="gesture-hint">拖动观察银幕，视点固定在当前座位</p>
         </div>
 
-        <aside className="seat-panel" aria-label="选座与体验指标">
-          <div className="auditorium-heading">
-            <div>
-              <span>{cinema.city}</span>
-              <h1>{auditorium.name}</h1>
+        <aside
+          className={`seat-panel ${
+            isSeatPanelCollapsed ? "is-collapsed" : ""
+          } ${isMobilePanelOpen ? "is-mobile-open" : ""} mobile-tab-${mobilePanelTab}`}
+          aria-label="选座与体验指标"
+          data-dbd-zone="cinema-seat-panel"
+          data-dbd-pattern="panel-sheet"
+        >
+          <div className="mobile-sheet-header">
+            <span className="mobile-sheet-handle" aria-hidden="true" />
+            <div className="mobile-sheet-tabs" role="tablist" aria-label="影厅面板">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mobilePanelTab === "seats"}
+                aria-controls="mobile-seat-panel"
+                className={mobilePanelTab === "seats" ? "is-selected" : ""}
+                onClick={() => showMobilePanelTab("seats")}
+              >
+                选座
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mobilePanelTab === "info"}
+                aria-controls="mobile-info-panel"
+                className={mobilePanelTab === "info" ? "is-selected" : ""}
+                onClick={() => showMobilePanelTab("info")}
+              >
+                影院信息
+              </button>
             </div>
-            <strong>{auditorium.format}</strong>
+            <button
+              className="mobile-sheet-toggle"
+              type="button"
+              onClick={() => setIsMobilePanelOpen((current) => !current)}
+              aria-expanded={isMobilePanelOpen}
+              aria-label={isMobilePanelOpen ? "收起影厅面板" : "展开影厅面板"}
+            >
+              {isMobilePanelOpen ? (
+                <CaretDown size={18} />
+              ) : (
+                <CaretUp size={18} />
+              )}
+            </button>
           </div>
 
-          <section className="technical-summary" aria-label="影厅技术数据">
-            <div>
-              <span>银幕数据</span>
-              <strong>
-                {auditorium.screenWidth.toFixed(1)} ×{" "}
-                {auditorium.screenHeight.toFixed(1)} m
-              </strong>
-              <small>
-                {(auditorium.screenWidth * auditorium.screenHeight).toFixed(0)}
-                ㎡ · {auditorium.screenAspect}
-              </small>
-            </div>
-            <div>
-              <span>放映技术</span>
-              <strong>{auditorium.projectionTechnology}</strong>
-              <small>{auditorium.projectionDetails.join(" / ")}</small>
-            </div>
-            <div className="screen-surface-spec">
-              <span>幕面光学模型</span>
-              <strong>{auditorium.screenSurface.name}</strong>
-              <small>
-                增益 {auditorium.screenSurface.gain.toFixed(1)} / 半增益角{" "}
-                {auditorium.screenSurface.halfGainAngle}° / 数字微孔{" "}
-                {auditorium.screenSurface.perforationMm.toFixed(1)} mm
-              </small>
-            </div>
-          </section>
-
-          <div className="screen-key">
-            <span>银幕</span>
-            <small>{auditorium.screenAspect}</small>
-          </div>
+          <button
+            className="panel-collapse-toggle"
+            type="button"
+            onClick={() => setIsSeatPanelCollapsed((current) => !current)}
+            aria-expanded={!isSeatPanelCollapsed}
+            aria-label={
+              isSeatPanelCollapsed
+                ? "展开选座与体验指标"
+                : "收起选座与体验指标"
+            }
+          >
+            {isSeatPanelCollapsed ? (
+              <CaretLeft size={18} />
+            ) : (
+              <CaretRight size={18} />
+            )}
+          </button>
 
           <div
-            className="seat-layout-source"
-            aria-label={`座位排列来源：${
-              auditorium.seatLayout ? "真实选座图" : "模型估算"
-            }`}
+            className="seat-panel-content"
+            hidden={
+              isSeatPanelCollapsed || (isMobile && !isMobilePanelOpen)
+            }
           >
-            <span className="seat-layout-source-copy">
-              <strong>座位排列</strong>
-              <small>
-                {auditorium.seatLayout
-                  ? "逐排座号、空槽与过道来自实际选座页面"
-                  : "当前没有实际选座图，按登记容量生成"}
-              </small>
-            </span>
-            <span
-              className={`seat-layout-source-tag ${
-                auditorium.seatLayout ? "is-captured" : "is-estimated"
-              }`}
-              data-dbd-component="tag"
-              role="status"
+            <div
+              className="panel-info-content"
+              id="mobile-info-panel"
+              role={isMobile ? "tabpanel" : undefined}
+              hidden={isMobile && mobilePanelTab !== "info"}
             >
-              {auditorium.seatLayout ? "真实座位排列" : "估算座位排列"}
-            </span>
-          </div>
-
-          <div className="seat-map" role="group" aria-label="座位图">
-            {Array.from({ length: auditorium.rowCount }, (_, row) => {
-              const rowSeats = seats.filter((seat) => seat.row === row);
-              return (
-                <div className="seat-row" key={row}>
-                  <span className="row-label">{rowSeats[0]?.rowLabel}</span>
-                  <div
-                    className={`seat-row-buttons ${
-                      auditorium.seatLayout ? "has-captured-layout" : ""
-                    }`}
-                    style={
-                      auditorium.seatLayout
-                        ? ({
-                            gridTemplateColumns: `repeat(${auditorium.seatLayout.gridColumns}, 9px)`,
-                            minWidth: `${
-                              auditorium.seatLayout.gridColumns * 12
-                            }px`,
-                          } satisfies CSSProperties)
-                        : undefined
+            <div className="auditorium-heading">
+              <div className="auditorium-title-row">
+                {cinemaAuditoriums.length === 1 ? (
+                  <h1>{auditorium.name}</h1>
+                ) : null}
+                <span
+                  className={`seat-layout-source-tag ${
+                    auditorium.seatLayout ? "is-captured" : "is-estimated"
+                  }`}
+                  data-dbd-component="tag"
+                  role="status"
+                >
+                  {auditorium.seatLayout ? "真实座位排列" : "估算座位排列"}
+                </span>
+              </div>
+              {cinemaAuditoriums.length > 1 ? (
+                <label className="auditorium-switcher">
+                  <select
+                    aria-label="切换影厅"
+                    value={auditorium.id}
+                    onChange={(event) =>
+                      switchAuditorium(event.target.value)
                     }
                   >
-                    {rowSeats.map((seat, index) => (
-                      <button
-                        type="button"
-                        key={seat.id}
-                        className={[
-                          "seat-button",
-                          seat.id === selectedSeat.id ? "is-selected" : "",
-                          seat.status === "occupied" ? "is-occupied" : "",
-                          !auditorium.seatLayout &&
-                          index === rowSeats.length / 2
-                            ? "after-aisle"
-                            : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
-                        style={
-                          auditorium.seatLayout
-                            ? { gridColumn: seat.gridSlot }
-                            : undefined
-                        }
-                        onClick={() => selectSeat(seat)}
-                        disabled={seat.status === "occupied"}
-                        aria-label={`${seat.rowLabel} 排 ${seat.number} 座${
-                          seat.status === "occupied" ? "，不可选" : ""
-                        }`}
-                        aria-pressed={seat.id === selectedSeat.id}
-                      />
+                    {cinemaAuditoriums.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} · {item.format}
+                      </option>
                     ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="seat-legend" aria-label="图例">
-            <span>
-              <i className="legend-available" /> 可选
-            </span>
-            <span>
-              <i className="legend-selected" /> 当前
-            </span>
-            <span>
-              <i className="legend-occupied" /> 不可选
-            </span>
-          </div>
-
-          <section className="seat-reading">
-            <div className="reading-title">
-              <span>
-                {selectedSeat.rowLabel} 排 {selectedSeat.number} 座
-              </span>
-              <strong>{metrics.verdict}</strong>
+                  </select>
+                </label>
+              ) : null}
             </div>
-            <p>{metrics.note}</p>
-            <dl>
-              <div>
-                <dt>水平视角</dt>
-                <dd>{metrics.horizontalFov.toFixed(0)}°</dd>
-              </div>
-              <div>
-                <dt>仰角</dt>
-                <dd>{metrics.verticalAngle.toFixed(0)}°</dd>
-              </div>
-              <div>
-                <dt>距银幕</dt>
-                <dd>{metrics.distance.toFixed(1)} m</dd>
-              </div>
-            </dl>
-          </section>
 
-          <p className="data-note">
-            模型说明：{auditorium.sourceNote}。指标为几何估算。
-          </p>
+            <section
+              className="technical-summary"
+              aria-label="影厅技术数据"
+              data-dbd-pattern="technical-summary"
+            >
+              <div>
+                <span>银幕数据</span>
+                <strong>
+                  {auditorium.screenWidth.toFixed(1)} ×{" "}
+                  {auditorium.screenHeight.toFixed(1)} m
+                </strong>
+                <small>
+                  {(auditorium.screenWidth * auditorium.screenHeight).toFixed(0)}
+                  ㎡ · {auditorium.screenAspect}
+                </small>
+              </div>
+              <div>
+                <span>放映技术</span>
+                <strong>{auditorium.projectionTechnology}</strong>
+                <small>{auditorium.projectionDetails.join(" / ")}</small>
+              </div>
+              <div className="screen-surface-spec">
+                <span>幕面光学模型</span>
+                <strong>{auditorium.screenSurface.name}</strong>
+                <small>
+                  增益 {auditorium.screenSurface.gain.toFixed(1)} / 半增益角{" "}
+                  {auditorium.screenSurface.halfGainAngle}° / 数字微孔{" "}
+                  {auditorium.screenSurface.perforationMm.toFixed(1)} mm
+                </small>
+              </div>
+            </section>
+            </div>
+
+            <div
+              className="panel-seat-content"
+              id="mobile-seat-panel"
+              role={isMobile ? "tabpanel" : undefined}
+              hidden={isMobile && mobilePanelTab !== "seats"}
+            >
+            <div className="screen-key">
+              <span>银幕</span>
+              <small>{auditorium.screenAspect}</small>
+            </div>
+
+            <div
+              className={[
+                "seat-map",
+                auditorium.rowCount >= 19
+                  ? "is-ultra-dense"
+                  : auditorium.rowCount >= 15
+                    ? "is-dense"
+                    : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              role="group"
+              aria-label="座位图"
+            >
+              {Array.from({ length: auditorium.rowCount }, (_, row) => {
+                const rowSeats = seats.filter((seat) => seat.row === row);
+                return (
+                  <div className="seat-row" key={row}>
+                    <span className="row-label">{rowSeats[0]?.rowLabel}</span>
+                    <div
+                      className={`seat-row-buttons ${
+                        auditorium.seatLayout ? "has-captured-layout" : ""
+                      }`}
+                      style={
+                        auditorium.seatLayout
+                          ? ({
+                              gridTemplateColumns: `repeat(${auditorium.seatLayout.gridColumns}, 9px)`,
+                              minWidth: `${
+                                auditorium.seatLayout.gridColumns * 12
+                              }px`,
+                            } satisfies CSSProperties)
+                          : undefined
+                      }
+                    >
+                      {rowSeats.map((seat, index) => (
+                        <button
+                          type="button"
+                          key={seat.id}
+                          className={[
+                            "seat-button",
+                            seat.id === selectedSeat.id ? "is-selected" : "",
+                            seat.status === "occupied" ? "is-occupied" : "",
+                            !auditorium.seatLayout &&
+                            index === rowSeats.length / 2
+                              ? "after-aisle"
+                              : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                          style={
+                            auditorium.seatLayout
+                              ? { gridColumn: seat.gridSlot }
+                              : undefined
+                          }
+                          onClick={() => selectSeat(seat)}
+                          disabled={seat.status === "occupied"}
+                          aria-label={`${seat.rowLabel} 排 ${seat.number} 座${
+                            seat.status === "occupied" ? "，不可选" : ""
+                          }`}
+                          aria-pressed={seat.id === selectedSeat.id}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="seat-legend" aria-label="图例">
+              <span>
+                <i className="legend-available" /> 可选
+              </span>
+              <span>
+                <i className="legend-selected" /> 当前
+              </span>
+              <span>
+                <i className="legend-occupied" /> 不可选
+              </span>
+            </div>
+
+            <section
+              className="seat-reading"
+              data-dbd-pattern="seat-metrics"
+            >
+              <div className="reading-title">
+                <span>
+                  {selectedSeat.rowLabel} 排 {selectedSeat.number} 座
+                </span>
+                <strong>{metrics.verdict}</strong>
+              </div>
+              <dl>
+                <div>
+                  <dt>水平视角</dt>
+                  <dd>{metrics.horizontalFov.toFixed(0)}°</dd>
+                </div>
+                <div>
+                  <dt>仰角</dt>
+                  <dd>{metrics.verticalAngle.toFixed(0)}°</dd>
+                </div>
+                <div>
+                  <dt>距银幕</dt>
+                  <dd>{metrics.distance.toFixed(1)} m</dd>
+                </div>
+              </dl>
+              <p title={metrics.note}>{metrics.note}</p>
+            </section>
+            </div>
+
+            <p
+              className="data-note panel-info-note"
+              hidden={isMobile && mobilePanelTab !== "info"}
+              title={`模型说明：${auditorium.sourceNote}。指标为几何估算。`}
+            >
+              模型说明：{auditorium.sourceNote}。指标为几何估算。
+            </p>
+          </div>
         </aside>
       </section>
     </main>

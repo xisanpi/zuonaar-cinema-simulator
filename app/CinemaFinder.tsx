@@ -74,6 +74,12 @@ function formatDistance(value: number | null) {
   return `${value.toFixed(value < 10 ? 1 : 0)} km`;
 }
 
+function formatLabel(format: PremiumFormat) {
+  if (format === "Dolby Cinema") return "杜比影院";
+  if (format === "Other PLF") return "精选巨幕";
+  return "IMAX";
+}
+
 function getCinemaDistance(
   cinema: CinemaListing,
   location: UserLocation,
@@ -105,6 +111,11 @@ function CinemaRow({
           <div>
             <div className="cinema-name-line">
               <h2>{cinema.name}</h2>
+              {cinema.priorityRank !== null ? (
+                <span className="status-tag status-tag-priority">
+                  首批重点 #{cinema.priorityRank}
+                </span>
+              ) : null}
               {needsReview ? (
                 <span className="status-tag status-tag-review">需复核</span>
               ) : null}
@@ -125,7 +136,7 @@ function CinemaRow({
               }`}
               key={format}
             >
-              {format === "Dolby Cinema" ? "杜比影院" : "IMAX"}
+              {formatLabel(format)}
             </span>
           ))}
           {cinema.halls.length > 1 ? (
@@ -336,6 +347,12 @@ export function CinemaFinder() {
           (right.distance ?? Number.POSITIVE_INFINITY)
         );
       }
+      if (left.cinema.priorityRank !== right.cinema.priorityRank) {
+        return (
+          (left.cinema.priorityRank ?? Number.POSITIVE_INFINITY) -
+          (right.cinema.priorityRank ?? Number.POSITIVE_INFINITY)
+        );
+      }
       const leftScore =
         (left.cinema.largestScreenArea ?? 0) +
         left.cinema.formats.length * 24 -
@@ -444,9 +461,9 @@ export function CinemaFinder() {
       <section className="finder-intro" data-dbd-zone="cinema-discovery-header">
         <div className="intro-copy">
           <span className="eyebrow">影院发现</span>
-          <h1>在坐下之前，先看清这块银幕。</h1>
+          <h1>先看视野，再决定坐哪儿。</h1>
           <p>
-            按城市查看已收录的 IMAX 与杜比影院，比较银幕、放映技术和距离，再进入真实比例的 3D 影厅。
+            按城市查看已收录的 IMAX、杜比影院与精选巨幕，比较银幕、放映技术和距离，再进入真实比例的 3D 影厅。
           </p>
         </div>
 
@@ -494,6 +511,7 @@ export function CinemaFinder() {
                 ["all", "全部"],
                 ["IMAX", "IMAX"],
                 ["Dolby Cinema", "杜比影院"],
+                ["Other PLF", "精选巨幕"],
               ] as const
             ).map(([value, label]) => (
               <button

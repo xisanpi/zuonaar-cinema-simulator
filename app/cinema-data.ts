@@ -26,10 +26,13 @@ type CapturedSeatLayout = {
   gridColumns: number;
   physicalSeats: number;
   inventorySeats: number | null;
-  countMatchesInventory: boolean;
+  countMatchesInventory: boolean | null;
   hallName: string;
   capturedAt: string;
   sourceUrl: string;
+  isPriority: boolean;
+  priorityRank: number | null;
+  priorityScore: number | null;
   rows: Array<{
     label: string;
     cells: Array<[seat: string, slot: number]>;
@@ -92,6 +95,33 @@ export const cinemaSeatGeometry = {
   seatedEyeHeightAboveCushion: 0.765,
 } as const;
 
+const estimatedRowSpacing = 1.2;
+const estimatedFirstRowZ = -3.8;
+const targetCenterHorizontalFov = 54;
+const minimumFrontDistanceInScreenWidths = 0.55;
+
+function distanceForHorizontalFov(screenWidth: number, horizontalFov: number) {
+  return (
+    screenWidth /
+    (2 * Math.tan((horizontalFov * Math.PI) / 360))
+  );
+}
+
+function calibratedScreenZ(screenWidth: number, rowCount: number) {
+  const centerRow = Math.floor(rowCount / 2);
+  const centerRowZ =
+    estimatedFirstRowZ + centerRow * estimatedRowSpacing;
+  const targetCenterDistance = distanceForHorizontalFov(
+    screenWidth,
+    targetCenterHorizontalFov,
+  );
+  const minimumCenterDistance =
+    screenWidth * minimumFrontDistanceInScreenWidths +
+    centerRow * estimatedRowSpacing;
+
+  return centerRowZ - Math.max(targetCenterDistance, minimumCenterDistance);
+}
+
 function approximateRows(hall: InventoryHall) {
   const screenWidth = hall.width ?? 18;
   const sourceSeats = hall.seats ?? 200;
@@ -121,8 +151,10 @@ function projectionDetails(hall: InventoryHall) {
 
   if (hall.brand === "Dolby Cinema") {
     details.push("Dolby Atmos 沉浸式音效");
-  } else {
+  } else if (hall.brand === "IMAX") {
     details.push("IMAX 专用音响系统");
+  } else {
+    details.push("精选高规格巨幕影厅");
   }
 
   return details;
@@ -146,42 +178,46 @@ function hallToAuditorium(hall: InventoryHall): Auditorium {
     seatingColumns * cinemaSeatGeometry.centerSpacing +
     (seatLayout ? 0 : cinemaSeatGeometry.centerGap);
   const capturedCountNote =
-    seatLayout && !seatLayout.countMatchesInventory
+    seatLayout && seatLayout.countMatchesInventory === false
       ? `；当前选座图为 ${seatLayout.physicalSeats} 座，与登记容量 ${
           seatLayout.inventorySeats ?? "待补"
         } 座存在版本或统计口径差异`
       : "";
+  const rowCount = rowSeatCounts.length;
 
   return {
     id: hall.id,
     cinemaId: cinema?.id ?? `cinema-${hall.id}`,
-    name: `${hall.brand} 厅`,
+    name:
+      hall.brand === "Other PLF"
+        ? "精选巨幕厅"
+        : `${hall.brand} 厅`,
     format: `${hall.brand} · ${hall.projection || "放映技术待补"}`,
     screenWidth,
     screenHeight,
     screenBottom: 1.5,
-    screenZ: -Math.max(18, screenWidth * 0.72),
+    screenZ: calibratedScreenZ(screenWidth, rowCount),
     screenAspect: hall.ratio || "比例待补",
     projectionTechnology: hall.projection || hall.brand,
     projectionDetails: projectionDetails(hall),
     screenSurface: {
       name: "高增益穿孔银幕（光学模拟）",
-      gain: hall.brand === "IMAX" ? 1.4 : 1.2,
+      gain: hall.brand === "IMAX" ? 1.4 : hall.brand === "Other PLF" ? 1.3 : 1.2,
       halfGainAngle: hall.brand === "IMAX" ? 85 : 90,
       perforationMm: 0.9,
       openAreaPercent: 4.16,
       curvatureDepth: Math.min(0.42, screenWidth / 90),
     },
-    rowCount: rowSeatCounts.length,
-    rowSpacing: 1.72,
+    rowCount,
+    rowSpacing: estimatedRowSpacing,
     rowRise: 0.48,
-    firstRowZ: -3.8,
+    firstRowZ: estimatedFirstRowZ,
     rowSeatCounts,
     seatingWidth,
     seatLayout,
     sourceNote: seatLayout
-      ? `银幕规格与放映制式来自公开数据库；逐排座号和空槽来自猫眼选座网格抓取${capturedCountNote}；座间距、排距和高差仍为几何估算`
-      : "银幕规格、放映制式与容量来自公开数据库；该厅尚无逐排抓取数据，座位排列按容量近似，不代表影院官方测绘",
+      ? `银幕规格与放映制式来自公开数据库；逐排座号和空槽来自猫眼选座网格抓取${capturedCountNote}；厅深按默认中排 54° 水平视角校准，座间距、排距和高差仍为几何估算`
+      : "银幕规格、放映制式与容量来自公开数据库；该厅尚无逐排抓取数据，座位排列按容量近似；厅深按默认中排 54° 水平视角校准，不代表影院官方测绘",
   };
 }
 
