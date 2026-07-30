@@ -111,6 +111,7 @@ export function CinemaExperience({
     seats.find((seat) => seat.id === getDefaultSeatId(auditorium.id)) ??
     seats[0];
   const metrics = getSeatMetrics(auditorium, selectedSeat);
+  const lightActionLabel = filmMode ? "开灯" : "关灯";
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)");
@@ -182,11 +183,15 @@ export function CinemaExperience({
           <button
             className={`projection-toggle ${filmMode ? "is-active" : ""}`}
             type="button"
+            data-dbd-component="button"
+            data-dbd-variant="plain"
             onClick={toggleFilmMode}
             aria-pressed={filmMode}
+            aria-label={lightActionLabel}
+            title={lightActionLabel}
           >
-            {filmMode ? <Moon size={19} /> : <SunDim size={19} />}
-            <span>{filmMode ? "放映中" : "散场灯光"}</span>
+            {filmMode ? <SunDim size={19} /> : <Moon size={19} />}
+            <span>{lightActionLabel}</span>
           </button>
         </div>
       </header>
