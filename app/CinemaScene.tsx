@@ -3,17 +3,17 @@
 /* Three.js cameras, renderers and materials are intentionally mutable. */
 /* eslint-disable react-hooks/immutability */
 
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import {
   AmbientLight,
   Color,
-  CylinderGeometry,
   Euler,
   ExtrudeGeometry,
   Fog,
   HemisphereLight,
   InstancedMesh,
   Matrix4,
+  MeshStandardMaterial,
   MeshBasicMaterial,
   MeshPhysicalMaterial,
   Object3D,
@@ -28,7 +28,10 @@ import {
   Vector3,
   VideoTexture,
 } from "three";
+import type { BufferGeometry, Material } from "three";
+import { mergeVertices } from "three/addons/utils/BufferGeometryUtils.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import {
   Suspense,
   useEffect,
@@ -1265,391 +1268,188 @@ function Seats({
   );
 }
 
+const audienceModelUrls = [
+  "/models/audience/quaternius-female-sitting.glb",
+  "/models/audience/quaternius-female-hair.glb",
+  "/models/audience/quaternius-male-sitting.glb",
+  "/models/audience/quaternius-male-hair.glb",
+] as const;
+const audienceVariants = [
+  {
+    bodyIndex: 0,
+    hairIndex: 1,
+    hairPosition: [0, 2.7, -0.68] as const,
+  },
+  {
+    bodyIndex: 2,
+    hairIndex: 3,
+    hairPosition: [0, 2.77, -0.72] as const,
+  },
+] as const;
+
+type AudienceModelPart = {
+  geometry: BufferGeometry;
+  material: Material;
+};
+
+function AudienceVariant({
+  parts,
+  seats,
+  isMobile,
+}: {
+  parts: AudienceModelPart[];
+  seats: Seat[];
+  isMobile: boolean;
+}) {
+  const meshRefs = useRef<Array<InstancedMesh | null>>([]);
+  const matrix = useMemo(() => new Matrix4(), []);
+  const personObject = useMemo(() => new Object3D(), []);
+
+  useLayoutEffect(() => {
+    const meshes = meshRefs.current;
+    if (meshes.some((mesh) => !mesh)) return;
+
+    seats.forEach((seat, index) => {
+      const personScale = 0.49 + ((index * 7) % 5) * 0.008;
+      const yaw = (((index * 11) % 7) - 3) * 0.012;
+
+      personObject.position.set(
+        seat.x,
+        seat.y + 0.015,
+        seat.z + 0.08,
+      );
+      personObject.rotation.set(0, yaw, 0);
+      personObject.scale.setScalar(personScale);
+      personObject.updateMatrix();
+      matrix.copy(personObject.matrix);
+
+      meshes.forEach((mesh) => mesh?.setMatrixAt(index, matrix));
+    });
+
+    meshes.forEach((mesh) => {
+      if (!mesh) return;
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.computeBoundingSphere();
+    });
+  }, [matrix, personObject, seats]);
+
+  return (
+    <>
+      {parts.map((part, partIndex) => (
+        <instancedMesh
+          key={partIndex}
+          ref={(mesh) => {
+            meshRefs.current[partIndex] = mesh;
+          }}
+          args={[part.geometry, part.material, seats.length]}
+          castShadow={!isMobile}
+        />
+      ))}
+    </>
+  );
+}
+
 function Audience({
   seats,
   selectedSeat,
   isMobile,
 }: Pick<CinemaSceneProps, "seats" | "selectedSeat" | "isMobile">) {
+  const models = useLoader(GLTFLoader, audienceModelUrls);
   const audienceSeats = useMemo(
-    () => seats.filter((seat) => seat.id !== selectedSeat.id),
-    [seats, selectedSeat.id],
+    () =>
+      seats.filter(
+        (seat) =>
+          seat.id !== selectedSeat.id &&
+          seat.z < selectedSeat.z - 0.1,
+      ),
+    [seats, selectedSeat.id, selectedSeat.z],
   );
-  const torsoRef = useRef<InstancedMesh>(null);
-  const shoulderRef = useRef<InstancedMesh>(null);
-  const neckRef = useRef<InstancedMesh>(null);
-  const headRef = useRef<InstancedMesh>(null);
-  const hairRef = useRef<InstancedMesh>(null);
-  const hairBackRef = useRef<InstancedMesh>(null);
-  const upperArmRef = useRef<InstancedMesh>(null);
-  const forearmRef = useRef<InstancedMesh>(null);
-  const handRef = useRef<InstancedMesh>(null);
-  const thighRef = useRef<InstancedMesh>(null);
-  const shinRef = useRef<InstancedMesh>(null);
-  const matrix = useMemo(() => new Matrix4(), []);
-  const personObject = useMemo(() => new Object3D(), []);
-  const limbDirection = useMemo(() => new Vector3(), []);
-  const limbMidpoint = useMemo(() => new Vector3(), []);
-  const limbQuaternion = useMemo(() => new Quaternion(), []);
-  const torsoGeometry = useMemo(
-    () => new CylinderGeometry(0.19, 0.235, 0.53, 10, 2),
-    [],
+  const seatsByVariant = useMemo(
+    () =>
+      audienceVariants.map((_, variantIndex) =>
+        audienceSeats.filter(
+          (_, index) => index % audienceVariants.length === variantIndex,
+        ),
+      ),
+    [audienceSeats],
   );
-  const shoulderGeometry = useMemo(
-    () => new RoundedBoxGeometry(0.43, 0.16, 0.23, 2, 0.07),
-    [],
+  const modelParts = useMemo(
+    () =>
+      audienceVariants.map((variant) => {
+        const parts: AudienceModelPart[] = [];
+
+        models[variant.bodyIndex].scene.traverse((object) => {
+          if (!("isMesh" in object) || !object.isMesh) return;
+          const sourceMaterial = Array.isArray(object.material)
+            ? object.material[0]
+            : object.material;
+          const material = sourceMaterial.clone();
+          const geometry = mergeVertices(object.geometry.clone(), 0.0001);
+          geometry.computeVertexNormals();
+
+          if (material instanceof MeshStandardMaterial) {
+            material.color.multiplyScalar(
+              object.name === "Skin" ? 0.56 : 0.48,
+            );
+            material.roughness = 0.94;
+            material.metalness = 0;
+          }
+
+          parts.push({
+            geometry,
+            material,
+          });
+        });
+
+        models[variant.hairIndex].scene.traverse((object) => {
+          if (!("isMesh" in object) || !object.isMesh) return;
+          const sourceMaterial = Array.isArray(object.material)
+            ? object.material[0]
+            : object.material;
+          const material = sourceMaterial.clone();
+          const geometry = mergeVertices(object.geometry.clone(), 0.0001);
+          geometry.translate(...variant.hairPosition);
+          geometry.computeVertexNormals();
+
+          if (material instanceof MeshStandardMaterial) {
+            material.color.set("#171311");
+            material.roughness = 0.98;
+            material.metalness = 0;
+          }
+
+          parts.push({ geometry, material });
+        });
+
+        return parts;
+      }),
+    [models],
   );
-  const hairBackGeometry = useMemo(
-    () => new RoundedBoxGeometry(0.205, 0.19, 0.075, 2, 0.035),
-    [],
-  );
-  const skinTones = useMemo(
-    () => [
-      new Color("#c78f72"),
-      new Color("#a66e53"),
-      new Color("#75493a"),
-      new Color("#d8aa8d"),
-    ],
-    [],
-  );
-  const clothingColors = useMemo(
-    () => [
-      new Color("#232a31"),
-      new Color("#303541"),
-      new Color("#243630"),
-      new Color("#392e36"),
-      new Color("#41332e"),
-      new Color("#25242d"),
-    ],
-    [],
-  );
-  const hairColors = useMemo(
-    () => [
-      new Color("#141416"),
-      new Color("#241914"),
-      new Color("#382820"),
-      new Color("#1b1716"),
-    ],
-    [],
-  );
 
-  useLayoutEffect(() => {
-    const meshes = [
-      torsoRef.current,
-      shoulderRef.current,
-      neckRef.current,
-      headRef.current,
-      hairRef.current,
-      hairBackRef.current,
-      upperArmRef.current,
-      forearmRef.current,
-      handRef.current,
-      thighRef.current,
-      shinRef.current,
-    ];
-    if (meshes.some((mesh) => !mesh)) return;
-
-    const placePart = (
-      mesh: InstancedMesh,
-      index: number,
-      position: [number, number, number],
-      rotation: [number, number, number],
-      scale: [number, number, number],
-    ) => {
-      personObject.position.set(...position);
-      personObject.rotation.set(...rotation);
-      personObject.scale.set(...scale);
-      personObject.updateMatrix();
-      matrix.copy(personObject.matrix);
-      mesh.setMatrixAt(index, matrix);
-    };
-
-    const placeLimb = (
-      mesh: InstancedMesh,
-      index: number,
-      start: [number, number, number],
-      end: [number, number, number],
-      radiusScale: number,
-    ) => {
-      limbDirection
-        .set(end[0] - start[0], end[1] - start[1], end[2] - start[2]);
-      const length = limbDirection.length();
-      limbMidpoint.set(
-        (start[0] + end[0]) / 2,
-        (start[1] + end[1]) / 2,
-        (start[2] + end[2]) / 2,
-      );
-      limbQuaternion.setFromUnitVectors(
-        upVector,
-        limbDirection.normalize(),
-      );
-
-      personObject.position.copy(limbMidpoint);
-      personObject.quaternion.copy(limbQuaternion);
-      personObject.scale.set(radiusScale, length, radiusScale);
-      personObject.updateMatrix();
-      matrix.copy(personObject.matrix);
-      mesh.setMatrixAt(index, matrix);
-    };
-
-    audienceSeats.forEach((seat, index) => {
-      const personScale = 0.94 + (index % 5) * 0.025;
-      const bodyWidth = 0.92 + ((index * 3) % 5) * 0.025;
-      const headScale = 0.94 + (index % 4) * 0.025;
-      const lean = 0.19 + (index % 3) * 0.018;
-      const eyeY = getSeatEyeY(seat);
-      const shoulderY = seat.y + 1.02 * personScale;
-      const shoulderZ = seat.z + 0.135;
-      const hipY = seat.y + 0.58;
-      const hipZ = seat.z + 0.02;
-      const clothingColor =
-        clothingColors[index % clothingColors.length];
-      const skinColor = skinTones[index % skinTones.length];
-      const hairColor = hairColors[(index * 3) % hairColors.length];
-
-      placePart(
-        torsoRef.current!,
-        index,
-        [seat.x, seat.y + 0.79, seat.z + 0.075],
-        [lean, 0, 0],
-        [bodyWidth * personScale, personScale, 0.7],
-      );
-      placePart(
-        shoulderRef.current!,
-        index,
-        [seat.x, shoulderY, shoulderZ],
-        [lean, 0, 0],
-        [bodyWidth * personScale, personScale, 0.9],
-      );
-      placePart(
-        neckRef.current!,
-        index,
-        [seat.x, eyeY - 0.105, seat.z + 0.185],
-        [lean, 0, 0],
-        [personScale, personScale, personScale],
-      );
-      placePart(
-        headRef.current!,
-        index,
-        [seat.x, eyeY + 0.005, seat.z + 0.205],
-        [0.035, 0, 0],
-        [0.91 * headScale, 1.08 * headScale, 0.94 * headScale],
-      );
-      placePart(
-        hairRef.current!,
-        index,
-        [seat.x, eyeY + 0.032, seat.z + 0.21],
-        [0.035, 0, 0],
-        [0.96 * headScale, 0.98 * headScale, headScale],
-      );
-      placePart(
-        hairBackRef.current!,
-        index,
-        [seat.x, eyeY - 0.025, seat.z + 0.302],
-        [0.035, 0, 0],
-        [
-          headScale,
-          index % 4 === 0 ? 1.2 * headScale : 0.75 * headScale,
-          headScale,
-        ],
-      );
-
-      [-1, 1].forEach((side, sideIndex) => {
-        const limbIndex = index * 2 + sideIndex;
-        const shoulderX = seat.x + side * 0.205 * bodyWidth;
-        const elbowX = seat.x + side * 0.225 * bodyWidth;
-        const handX = seat.x + side * 0.12;
-        const legX = seat.x + side * 0.12 * personScale;
-
-        placeLimb(
-          upperArmRef.current!,
-          limbIndex,
-          [shoulderX, shoulderY - 0.015, shoulderZ],
-          [elbowX, seat.y + 0.76, seat.z + 0.075],
-          0.93 * personScale,
-        );
-        placeLimb(
-          forearmRef.current!,
-          limbIndex,
-          [elbowX, seat.y + 0.76, seat.z + 0.075],
-          [handX, seat.y + 0.61, seat.z - 0.14],
-          0.86 * personScale,
-        );
-        placePart(
-          handRef.current!,
-          limbIndex,
-          [handX, seat.y + 0.595, seat.z - 0.15],
-          [0, 0, 0],
-          [personScale, personScale, 1.15 * personScale],
-        );
-        placeLimb(
-          thighRef.current!,
-          limbIndex,
-          [legX, hipY, hipZ],
-          [legX, seat.y + 0.43, seat.z - 0.32],
-          1.04 * personScale,
-        );
-        placeLimb(
-          shinRef.current!,
-          limbIndex,
-          [legX, seat.y + 0.43, seat.z - 0.32],
-          [legX, seat.y + 0.1, seat.z - 0.27],
-          0.92 * personScale,
-        );
+  useEffect(
+    () => () => {
+      modelParts.flat().forEach(({ geometry, material }) => {
+        geometry.dispose();
+        material.dispose();
       });
-
-      torsoRef.current?.setColorAt(index, clothingColor);
-      shoulderRef.current?.setColorAt(index, clothingColor);
-      [
-        upperArmRef.current!,
-        forearmRef.current!,
-        thighRef.current!,
-        shinRef.current!,
-      ].forEach((mesh) => {
-        mesh.setColorAt(index * 2, clothingColor);
-        mesh.setColorAt(index * 2 + 1, clothingColor);
-      });
-      neckRef.current?.setColorAt(index, skinColor);
-      headRef.current?.setColorAt(index, skinColor);
-      handRef.current?.setColorAt(index * 2, skinColor);
-      handRef.current?.setColorAt(index * 2 + 1, skinColor);
-      hairRef.current?.setColorAt(index, hairColor);
-      hairBackRef.current?.setColorAt(index, hairColor);
-    });
-
-    meshes.forEach((mesh) => {
-      mesh!.instanceMatrix.needsUpdate = true;
-      if (mesh!.instanceColor) mesh!.instanceColor.needsUpdate = true;
-      mesh!.computeBoundingSphere();
-    });
-  }, [
-    audienceSeats,
-    clothingColors,
-    hairColors,
-    limbDirection,
-    limbMidpoint,
-    limbQuaternion,
-    matrix,
-    personObject,
-    skinTones,
-  ]);
-
-  const clothingMaterial = (
-    <meshStandardMaterial
-      vertexColors
-      roughness={0.96}
-      metalness={0}
-    />
-  );
-  const skinMaterial = (
-    <meshStandardMaterial
-      vertexColors
-      roughness={0.92}
-      metalness={0}
-    />
-  );
-  const hairMaterial = (
-    <meshStandardMaterial
-      vertexColors
-      roughness={0.98}
-      metalness={0}
-    />
+    },
+    [modelParts],
   );
 
   return (
     <group>
-      <instancedMesh
-        ref={torsoRef}
-        args={[undefined, undefined, audienceSeats.length]}
-        castShadow={!isMobile}
-      >
-        <primitive object={torsoGeometry} attach="geometry" />
-        {clothingMaterial}
-      </instancedMesh>
-      <instancedMesh
-        ref={shoulderRef}
-        args={[undefined, undefined, audienceSeats.length]}
-        castShadow={!isMobile}
-      >
-        <primitive object={shoulderGeometry} attach="geometry" />
-        {clothingMaterial}
-      </instancedMesh>
-      <instancedMesh
-        ref={neckRef}
-        args={[undefined, undefined, audienceSeats.length]}
-        castShadow={!isMobile}
-      >
-        <cylinderGeometry args={[0.052, 0.06, 0.095, 8]} />
-        {skinMaterial}
-      </instancedMesh>
-      <instancedMesh
-        ref={headRef}
-        args={[undefined, undefined, audienceSeats.length]}
-        castShadow={!isMobile}
-      >
-        <sphereGeometry args={[0.112, 12, 10]} />
-        {skinMaterial}
-      </instancedMesh>
-      <instancedMesh
-        ref={hairRef}
-        args={[undefined, undefined, audienceSeats.length]}
-        castShadow={!isMobile}
-      >
-        <sphereGeometry
-          args={[0.119, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.58]}
+      {modelParts.map((parts, variantIndex) => (
+        <AudienceVariant
+          key={audienceVariants[variantIndex].bodyIndex}
+          parts={parts}
+          seats={seatsByVariant[variantIndex]}
+          isMobile={isMobile}
         />
-        {hairMaterial}
-      </instancedMesh>
-      <instancedMesh
-        ref={hairBackRef}
-        args={[undefined, undefined, audienceSeats.length]}
-        castShadow={!isMobile}
-      >
-        <primitive object={hairBackGeometry} attach="geometry" />
-        {hairMaterial}
-      </instancedMesh>
-      <instancedMesh
-        ref={upperArmRef}
-        args={[undefined, undefined, audienceSeats.length * 2]}
-        castShadow={!isMobile}
-      >
-        <cylinderGeometry args={[0.055, 0.062, 1, 8]} />
-        {clothingMaterial}
-      </instancedMesh>
-      <instancedMesh
-        ref={forearmRef}
-        args={[undefined, undefined, audienceSeats.length * 2]}
-        castShadow={!isMobile}
-      >
-        <cylinderGeometry args={[0.047, 0.055, 1, 8]} />
-        {clothingMaterial}
-      </instancedMesh>
-      <instancedMesh
-        ref={handRef}
-        args={[undefined, undefined, audienceSeats.length * 2]}
-        castShadow={!isMobile}
-      >
-        <sphereGeometry args={[0.05, 8, 6]} />
-        {skinMaterial}
-      </instancedMesh>
-      <instancedMesh
-        ref={thighRef}
-        args={[undefined, undefined, audienceSeats.length * 2]}
-        castShadow={!isMobile}
-      >
-        <cylinderGeometry args={[0.075, 0.085, 1, 8]} />
-        {clothingMaterial}
-      </instancedMesh>
-      <instancedMesh
-        ref={shinRef}
-        args={[undefined, undefined, audienceSeats.length * 2]}
-        castShadow={!isMobile}
-      >
-        <cylinderGeometry args={[0.06, 0.072, 1, 8]} />
-        {clothingMaterial}
-      </instancedMesh>
+      ))}
     </group>
   );
 }
+
+useLoader.preload(GLTFLoader, audienceModelUrls);
 
 function SceneLighting({
   filmMode,
