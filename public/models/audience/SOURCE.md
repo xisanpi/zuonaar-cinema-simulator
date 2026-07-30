@@ -18,6 +18,9 @@ Selected source models:
 - `Male/Male Hairstyles/OBJ/Male_Hairstyle_2.obj`
 
 The GLB conversion preserves the static posed geometry and embedded
-materials. Runtime code attaches the matching hairstyles, smooths vertex
-normals, adjusts material roughness and metalness for the cinema lighting
-setup, and draws repeated characters with GPU instancing.
+materials. Runtime code rotates every body toward the screen, scales it to
+the cinema seats, smooths vertex normals, applies subdued matte materials,
+and draws repeated characters with GPU instancing. The converted hairstyle
+files remain bundled for source provenance; the current simulator uses
+simple smooth rear hair caps so viewers see quiet silhouettes instead of
+low-poly faces.

@@ -23,6 +23,7 @@ import {
   Quaternion,
   ShaderMaterial,
   Shape,
+  SphereGeometry,
   SpotLight,
   SRGBColorSpace,
   Vector3,
@@ -1270,22 +1271,25 @@ function Seats({
 
 const audienceModelUrls = [
   "/models/audience/quaternius-female-sitting.glb",
-  "/models/audience/quaternius-female-hair.glb",
   "/models/audience/quaternius-male-sitting.glb",
-  "/models/audience/quaternius-male-hair.glb",
 ] as const;
 const audienceVariants = [
   {
     bodyIndex: 0,
-    hairIndex: 1,
-    hairPosition: [0, 2.7, -0.68] as const,
+    shirtColor: "#3d4652",
+    pantsColor: "#24272b",
+    hairColor: "#201715",
+    hairScale: [0.7, 1, 0.78] as const,
   },
   {
-    bodyIndex: 2,
-    hairIndex: 3,
-    hairPosition: [0, 2.77, -0.72] as const,
+    bodyIndex: 1,
+    shirtColor: "#403a37",
+    pantsColor: "#222529",
+    hairColor: "#151414",
+    hairScale: [0.66, 0.94, 0.72] as const,
   },
 ] as const;
+const audienceFacingScreenYaw = Math.PI;
 
 type AudienceModelPart = {
   geometry: BufferGeometry;
@@ -1310,7 +1314,7 @@ function AudienceVariant({
     if (meshes.some((mesh) => !mesh)) return;
 
     seats.forEach((seat, index) => {
-      const personScale = 0.49 + ((index * 7) % 5) * 0.008;
+      const personScale = 0.425 + ((index * 7) % 5) * 0.006;
       const yaw = (((index * 11) % 7) - 3) * 0.012;
 
       personObject.position.set(
@@ -1318,7 +1322,11 @@ function AudienceVariant({
         seat.y + 0.015,
         seat.z + 0.08,
       );
-      personObject.rotation.set(0, yaw, 0);
+      personObject.rotation.set(
+        0,
+        audienceFacingScreenYaw + yaw,
+        0,
+      );
       personObject.scale.setScalar(personScale);
       personObject.updateMatrix();
       matrix.copy(personObject.matrix);
@@ -1388,9 +1396,15 @@ function Audience({
           geometry.computeVertexNormals();
 
           if (material instanceof MeshStandardMaterial) {
-            material.color.multiplyScalar(
-              object.name === "Skin" ? 0.56 : 0.48,
-            );
+            const partColor =
+              object.name === "Skin"
+                ? "#654b3e"
+                : object.name === "Shirt"
+                  ? variant.shirtColor
+                  : object.name === "Pants"
+                    ? variant.pantsColor
+                    : "#211b19";
+            material.color.set(partColor);
             material.roughness = 0.94;
             material.metalness = 0;
           }
@@ -1401,23 +1415,25 @@ function Audience({
           });
         });
 
-        models[variant.hairIndex].scene.traverse((object) => {
-          if (!("isMesh" in object) || !object.isMesh) return;
-          const sourceMaterial = Array.isArray(object.material)
-            ? object.material[0]
-            : object.material;
-          const material = sourceMaterial.clone();
-          const geometry = mergeVertices(object.geometry.clone(), 0.0001);
-          geometry.translate(...variant.hairPosition);
-          geometry.computeVertexNormals();
-
-          if (material instanceof MeshStandardMaterial) {
-            material.color.set("#171311");
-            material.roughness = 0.98;
-            material.metalness = 0;
-          }
-
-          parts.push({ geometry, material });
+        const hairGeometry = new SphereGeometry(
+          0.45,
+          24,
+          16,
+          Math.PI * 0.9,
+          Math.PI * 1.2,
+          0,
+          Math.PI * 0.94,
+        );
+        hairGeometry.scale(...variant.hairScale);
+        hairGeometry.translate(0, 2.67, -0.75);
+        hairGeometry.computeVertexNormals();
+        parts.push({
+          geometry: hairGeometry,
+          material: new MeshStandardMaterial({
+            color: variant.hairColor,
+            roughness: 0.98,
+            metalness: 0,
+          }),
         });
 
         return parts;
