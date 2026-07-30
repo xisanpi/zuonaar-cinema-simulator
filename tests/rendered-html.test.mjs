@@ -36,6 +36,8 @@ test("server-renders the cinema discovery page", async () => {
   assert.match(html, /杜比影院/);
   assert.match(html, /精选巨幕/);
   assert.match(html, /进入影厅/);
+  assert.match(html, /aria-busy="false"/);
+  assert.match(html, /data-navigation-state="idle"/);
   assert.match(html, /href="\/cinema\/hall-0018"/);
   assert.doesNotMatch(html, /href="\/cinema\/hall-0003"/);
   assert.match(html, /中国电影博物馆/);

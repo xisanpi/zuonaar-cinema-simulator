@@ -98,6 +98,7 @@ function CinemaRow({
   cinema: CinemaListing;
   distance: number | null;
 }) {
+  const [isEntering, setIsEntering] = useState(false);
   const hall = cinema.featuredHall;
   const defaultHall =
     cinema.halls.find((item) => item.brand === "IMAX") ?? hall;
@@ -189,12 +190,28 @@ function CinemaRow({
           </a>
         </div>
         <Link
-          className="primary-link"
+          className={`primary-link ${isEntering ? "is-loading" : ""}`}
           href={`/cinema/${defaultHall.id}`}
+          aria-busy={isEntering}
+          aria-disabled={isEntering}
+          data-navigation-state={isEntering ? "loading" : "idle"}
           data-dbd-component="button"
+          onClick={(event) => {
+            if (isEntering) event.preventDefault();
+          }}
+          onNavigate={() => setIsEntering(true)}
         >
-          <span>进入影厅</span>
-          <DbxIcon name="arrow-right" size={18} />
+          {isEntering ? (
+            <>
+              <span className="primary-link-spinner" aria-hidden="true" />
+              <span>正在进入</span>
+            </>
+          ) : (
+            <>
+              <span>进入影厅</span>
+              <DbxIcon name="arrow-right" size={18} />
+            </>
+          )}
         </Link>
       </div>
     </article>

@@ -1684,6 +1684,7 @@ a:focus-visible {
 
 .primary-link {
   min-height: 40px;
+  min-width: 104px;
   padding: 0 13px;
   display: flex;
   align-items: center;
@@ -1706,6 +1707,29 @@ a:focus-visible {
 
 .primary-link:active {
   transform: scale(0.98);
+}
+
+.primary-link.is-loading {
+  background: var(--surface-soft);
+  color: var(--muted);
+  cursor: progress;
+  pointer-events: none;
+}
+
+.primary-link-spinner {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  border: 1.5px solid color-mix(in srgb, currentColor 28%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: primary-link-spin 720ms linear infinite;
+}
+
+@keyframes primary-link-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .empty-results {
