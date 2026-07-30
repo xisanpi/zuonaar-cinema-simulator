@@ -59,6 +59,7 @@ type CinemaSceneProps = {
   filmSource: FilmSource;
   viewCommand: ViewCommand;
   isMobile: boolean;
+  showAudience: boolean;
 };
 
 const upVector = new Vector3(0, 1, 0);
@@ -1263,6 +1264,167 @@ function Seats({
   );
 }
 
+function Audience({
+  seats,
+  selectedSeat,
+  isMobile,
+}: Pick<CinemaSceneProps, "seats" | "selectedSeat" | "isMobile">) {
+  const audienceSeats = useMemo(
+    () => seats.filter((seat) => seat.id !== selectedSeat.id),
+    [seats, selectedSeat.id],
+  );
+  const torsoRef = useRef<InstancedMesh>(null);
+  const headRef = useRef<InstancedMesh>(null);
+  const hairRef = useRef<InstancedMesh>(null);
+  const matrix = useMemo(() => new Matrix4(), []);
+  const personObject = useMemo(() => new Object3D(), []);
+  const torsoGeometry = useMemo(
+    () => new RoundedBoxGeometry(0.44, 0.6, 0.28, 3, 0.1),
+    [],
+  );
+  const skinTones = useMemo(
+    () => [
+      new Color("#d7a080"),
+      new Color("#b97859"),
+      new Color("#8b5844"),
+      new Color("#e3b596"),
+    ],
+    [],
+  );
+  const clothingColors = useMemo(
+    () => [
+      new Color("#26313d"),
+      new Color("#323a48"),
+      new Color("#243b37"),
+      new Color("#3c3038"),
+      new Color("#49362e"),
+    ],
+    [],
+  );
+  const hairColors = useMemo(
+    () => [
+      new Color("#141416"),
+      new Color("#241914"),
+      new Color("#382820"),
+      new Color("#1b1716"),
+    ],
+    [],
+  );
+
+  useLayoutEffect(() => {
+    if (!torsoRef.current || !headRef.current || !hairRef.current) return;
+
+    const placePart = (
+      mesh: InstancedMesh,
+      index: number,
+      position: [number, number, number],
+      rotation: [number, number, number],
+      scale: [number, number, number],
+    ) => {
+      personObject.position.set(...position);
+      personObject.rotation.set(...rotation);
+      personObject.scale.set(...scale);
+      personObject.updateMatrix();
+      matrix.copy(personObject.matrix);
+      mesh.setMatrixAt(index, matrix);
+    };
+
+    audienceSeats.forEach((seat, index) => {
+      const bodyScale = 0.94 + (index % 5) * 0.025;
+      const headScale = 0.94 + (index % 4) * 0.025;
+      const eyeY = getSeatEyeY(seat);
+
+      placePart(
+        torsoRef.current!,
+        index,
+        [seat.x, seat.y + 0.96, seat.z - 0.08],
+        [-0.12, 0, 0],
+        [bodyScale, 1, 1],
+      );
+      placePart(
+        headRef.current!,
+        index,
+        [seat.x, eyeY + 0.035, seat.z - 0.13],
+        [0, 0, 0],
+        [headScale, 1.05 * headScale, headScale],
+      );
+      placePart(
+        hairRef.current!,
+        index,
+        [seat.x, eyeY + 0.055, seat.z - 0.115],
+        [0, 0, 0],
+        [headScale * 1.04, headScale, headScale * 1.04],
+      );
+
+      torsoRef.current?.setColorAt(
+        index,
+        clothingColors[index % clothingColors.length],
+      );
+      headRef.current?.setColorAt(index, skinTones[index % skinTones.length]);
+      hairRef.current?.setColorAt(
+        index,
+        hairColors[(index * 3) % hairColors.length],
+      );
+    });
+
+    [torsoRef.current, headRef.current, hairRef.current].forEach((mesh) => {
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      mesh.computeBoundingSphere();
+    });
+  }, [
+    audienceSeats,
+    clothingColors,
+    hairColors,
+    matrix,
+    personObject,
+    skinTones,
+  ]);
+
+  return (
+    <group>
+      <instancedMesh
+        ref={torsoRef}
+        args={[undefined, undefined, audienceSeats.length]}
+        castShadow={!isMobile}
+      >
+        <primitive object={torsoGeometry} attach="geometry" />
+        <meshStandardMaterial
+          vertexColors
+          roughness={0.93}
+          metalness={0}
+        />
+      </instancedMesh>
+      <instancedMesh
+        ref={headRef}
+        args={[undefined, undefined, audienceSeats.length]}
+        castShadow={!isMobile}
+      >
+        <sphereGeometry args={[0.115, 10, 8]} />
+        <meshStandardMaterial
+          vertexColors
+          roughness={0.88}
+          metalness={0}
+        />
+      </instancedMesh>
+      <instancedMesh
+        ref={hairRef}
+        args={[undefined, undefined, audienceSeats.length]}
+        castShadow={!isMobile}
+      >
+        <sphereGeometry
+          args={[0.121, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.68]}
+        />
+        <meshStandardMaterial
+          vertexColors
+          roughness={0.96}
+          metalness={0}
+        />
+      </instancedMesh>
+    </group>
+  );
+}
+
 function SceneLighting({
   filmMode,
   isMobile,
@@ -1391,6 +1553,13 @@ function SceneContents(props: CinemaSceneProps) {
         selectedSeat={props.selectedSeat}
         filmMode={filmMode}
       />
+      {props.showAudience && (
+        <Audience
+          seats={props.seats}
+          selectedSeat={props.selectedSeat}
+          isMobile={isMobile}
+        />
+      )}
       <CameraRig
         auditorium={auditorium}
         selectedSeat={props.selectedSeat}
