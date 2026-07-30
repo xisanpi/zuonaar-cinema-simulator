@@ -36,6 +36,8 @@ test("server-renders the cinema discovery page", async () => {
   assert.match(html, /杜比影院/);
   assert.match(html, /精选巨幕/);
   assert.match(html, /进入影厅/);
+  assert.match(html, /href="\/cinema\/hall-0018"/);
+  assert.doesNotMatch(html, /href="\/cinema\/hall-0003"/);
   assert.match(html, /中国电影博物馆/);
   assert.match(html, /我的位置/);
   assert.match(html, /先看视野，再决定坐哪儿。/);
@@ -64,6 +66,18 @@ test("server-renders a selected auditorium simulator", async () => {
   assert.doesNotMatch(html, /自由视角/);
   assert.doesNotMatch(html, /从这里看/);
   assert.doesNotMatch(html, />全厅</);
+});
+
+test("multi-format cinemas default to IMAX and use the title as the switcher", async () => {
+  const response = await render("/cinema/hall-0045");
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  assert.match(html, /aria-label="切换影厅"/);
+  assert.match(html, /data-dbd-pattern="auditorium-switcher"/);
+  assert.match(html, /<option value="hall-0076" selected="">IMAX 厅<\/option>/);
+  assert.match(html, /25\.9/);
+  assert.match(html, /13\.5/);
 });
 
 test("labels captured seat layouts explicitly", async () => {

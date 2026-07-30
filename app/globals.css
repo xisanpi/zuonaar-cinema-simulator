@@ -446,8 +446,6 @@ button {
 
 .auditorium-heading {
   padding-right: 40px;
-  display: grid;
-  gap: 8px;
 }
 
 .auditorium-title-row {
@@ -457,34 +455,57 @@ button {
   gap: 8px;
 }
 
-.auditorium-heading h1 {
+.auditorium-heading h1,
+.auditorium-title-switcher select {
   min-width: 0;
   margin: 0;
   font-size: 19px;
+  font-weight: 650;
   line-height: 1.15;
   letter-spacing: -0.04em;
 }
 
-.auditorium-switcher {
+.auditorium-title-switcher {
+  flex: 1 1 auto;
   min-width: 0;
-  margin: 0;
-  display: block;
+  margin: 0 0 0 -8px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
 }
 
-.auditorium-switcher select {
+.auditorium-title-switcher:hover {
+  border-color: var(--line);
+  background: var(--surface-raised);
+}
+
+.auditorium-title-switcher select {
   width: 100%;
   height: 32px;
-  min-width: 0;
-  padding: 0 30px 0 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  padding: 0 30px 0 8px;
+  border: 0;
+  border-radius: inherit;
+  appearance: none;
   outline: 0;
-  background: var(--surface-raised);
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1;
+  overflow: hidden;
+  background: transparent;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
   cursor: pointer;
+}
+
+.auditorium-title-caret {
+  position: absolute;
+  right: 8px;
+  color: var(--muted);
+  pointer-events: none;
 }
 
 .technical-summary {
@@ -858,11 +879,7 @@ a:focus-visible {
 }
 
 @media (min-width: 768px) and (max-height: 850px) {
-  .auditorium-heading {
-    gap: 6px;
-  }
-
-  .auditorium-switcher select {
+  .auditorium-title-switcher select {
     height: 28px;
   }
 

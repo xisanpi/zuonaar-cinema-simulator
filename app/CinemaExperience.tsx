@@ -46,6 +46,19 @@ const CinemaScene = dynamic(
 const idleViewCommand = { yaw: 0, pitch: 0, token: 0 };
 type MobilePanelTab = "seats" | "info";
 
+function getPreferredAuditorium(initialAuditoriumId?: string) {
+  const requestedAuditorium =
+    getAuditoriumById(initialAuditoriumId ?? "") ?? auditoriums[0];
+
+  return (
+    auditoriums.find(
+      (item) =>
+        item.cinemaId === requestedAuditorium.cinemaId &&
+        item.name.startsWith("IMAX"),
+    ) ?? requestedAuditorium
+  );
+}
+
 function getDefaultSeatId(auditoriumId: string) {
   const auditorium =
     auditoriums.find((item) => item.id === auditoriumId) ?? auditoriums[0];
@@ -69,8 +82,7 @@ export function CinemaExperience({
 }: {
   initialAuditoriumId?: string;
 }) {
-  const initialAuditorium =
-    getAuditoriumById(initialAuditoriumId ?? "") ?? auditoriums[0];
+  const initialAuditorium = getPreferredAuditorium(initialAuditoriumId);
   const [auditoriumId, setAuditoriumId] = useState(initialAuditorium.id);
   const [selectedSeatId, setSelectedSeatId] = useState(() =>
     getDefaultSeatId(initialAuditorium.id),
@@ -346,9 +358,33 @@ export function CinemaExperience({
             >
             <div className="auditorium-heading">
               <div className="auditorium-title-row">
-                {cinemaAuditoriums.length === 1 ? (
+                {cinemaAuditoriums.length > 1 ? (
+                  <label
+                    className="auditorium-title-switcher"
+                    data-dbd-pattern="auditorium-switcher"
+                  >
+                    <select
+                      aria-label="切换影厅"
+                      value={auditorium.id}
+                      onChange={(event) =>
+                        switchAuditorium(event.target.value)
+                      }
+                    >
+                      {cinemaAuditoriums.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                    <CaretDown
+                      className="auditorium-title-caret"
+                      size={16}
+                      aria-hidden="true"
+                    />
+                  </label>
+                ) : (
                   <h1>{auditorium.name}</h1>
-                ) : null}
+                )}
                 <span
                   className={`seat-layout-source-tag ${
                     auditorium.seatLayout ? "is-captured" : "is-estimated"
@@ -359,23 +395,6 @@ export function CinemaExperience({
                   {auditorium.seatLayout ? "真实座位排列" : "估算座位排列"}
                 </span>
               </div>
-              {cinemaAuditoriums.length > 1 ? (
-                <label className="auditorium-switcher">
-                  <select
-                    aria-label="切换影厅"
-                    value={auditorium.id}
-                    onChange={(event) =>
-                      switchAuditorium(event.target.value)
-                    }
-                  >
-                    {cinemaAuditoriums.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name} · {item.format}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
             </div>
 
             <section

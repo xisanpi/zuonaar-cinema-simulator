@@ -99,6 +99,8 @@ function CinemaRow({
   distance: number | null;
 }) {
   const hall = cinema.featuredHall;
+  const defaultHall =
+    cinema.halls.find((item) => item.brand === "IMAX") ?? hall;
   const needsReview = cinema.halls.some((item) => item.status !== "在册");
 
   return (
@@ -188,7 +190,7 @@ function CinemaRow({
         </div>
         <Link
           className="primary-link"
-          href={`/cinema/${hall.id}`}
+          href={`/cinema/${defaultHall.id}`}
           data-dbd-component="button"
         >
           <span>进入影厅</span>
