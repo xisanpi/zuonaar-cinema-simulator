@@ -12,7 +12,6 @@ import {
   Pause,
   Play,
   SunDim,
-  UsersThree,
 } from "@phosphor-icons/react";
 import {
   useEffect,
@@ -89,7 +88,6 @@ export function CinemaExperience({
   );
   const [filmMode, setFilmMode] = useState(false);
   const [playing, setPlaying] = useState(false);
-  const [showAudience, setShowAudience] = useState(false);
   const [filmSource, setFilmSource] =
     useState<FilmSource>("imax-countdown");
   const [isSeatPanelCollapsed, setIsSeatPanelCollapsed] = useState(false);
@@ -164,23 +162,6 @@ export function CinemaExperience({
 
         <div className="topbar-actions" aria-label="影厅显示设置">
           <button
-            className={`audience-toggle ${showAudience ? "is-active" : ""}`}
-            type="button"
-            role="switch"
-            data-dbd-component="switch"
-            aria-checked={showAudience}
-            aria-label={showAudience ? "隐藏观众" : "显示观众"}
-            title={showAudience ? "隐藏观众" : "显示观众"}
-            onClick={() => setShowAudience((current) => !current)}
-          >
-            <UsersThree
-              size={19}
-              weight={showAudience ? "fill" : "regular"}
-            />
-            <span>坐人</span>
-          </button>
-
-          <button
             className={`projection-toggle ${filmMode ? "is-active" : ""}`}
             type="button"
             data-dbd-component="button"
@@ -212,7 +193,6 @@ export function CinemaExperience({
             filmSource={filmSource}
             viewCommand={idleViewCommand}
             isMobile={isMobile}
-            showAudience={showAudience}
           />
 
           <div className="scene-seat-status" aria-live="polite">

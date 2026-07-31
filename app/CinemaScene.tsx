@@ -3,7 +3,7 @@
 /* Three.js cameras, renderers and materials are intentionally mutable. */
 /* eslint-disable react-hooks/immutability */
 
-import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   AmbientLight,
   Color,
@@ -13,7 +13,6 @@ import {
   HemisphereLight,
   InstancedMesh,
   Matrix4,
-  MeshStandardMaterial,
   MeshBasicMaterial,
   MeshPhysicalMaterial,
   Object3D,
@@ -23,16 +22,12 @@ import {
   Quaternion,
   ShaderMaterial,
   Shape,
-  SphereGeometry,
   SpotLight,
   SRGBColorSpace,
   Vector3,
   VideoTexture,
 } from "three";
-import type { BufferGeometry, Material } from "three";
-import { mergeVertices } from "three/addons/utils/BufferGeometryUtils.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import {
   Suspense,
   useEffect,
@@ -64,7 +59,6 @@ type CinemaSceneProps = {
   filmSource: FilmSource;
   viewCommand: ViewCommand;
   isMobile: boolean;
-  showAudience: boolean;
 };
 
 const upVector = new Vector3(0, 1, 0);
@@ -1269,204 +1263,6 @@ function Seats({
   );
 }
 
-const audienceModelUrls = [
-  "/models/audience/quaternius-female-sitting.glb",
-  "/models/audience/quaternius-male-sitting.glb",
-] as const;
-const audienceVariants = [
-  {
-    bodyIndex: 0,
-    shirtColor: "#3d4652",
-    pantsColor: "#24272b",
-    hairColor: "#201715",
-    hairScale: [0.7, 1, 0.78] as const,
-  },
-  {
-    bodyIndex: 1,
-    shirtColor: "#403a37",
-    pantsColor: "#222529",
-    hairColor: "#151414",
-    hairScale: [0.66, 0.94, 0.72] as const,
-  },
-] as const;
-const audienceFacingScreenYaw = Math.PI;
-
-type AudienceModelPart = {
-  geometry: BufferGeometry;
-  material: Material;
-};
-
-function AudienceVariant({
-  parts,
-  seats,
-  isMobile,
-}: {
-  parts: AudienceModelPart[];
-  seats: Seat[];
-  isMobile: boolean;
-}) {
-  const meshRefs = useRef<Array<InstancedMesh | null>>([]);
-  const matrix = useMemo(() => new Matrix4(), []);
-  const personObject = useMemo(() => new Object3D(), []);
-
-  useLayoutEffect(() => {
-    const meshes = meshRefs.current;
-    if (meshes.some((mesh) => !mesh)) return;
-
-    seats.forEach((seat, index) => {
-      const personScale = 0.425 + ((index * 7) % 5) * 0.006;
-      const yaw = (((index * 11) % 7) - 3) * 0.012;
-
-      personObject.position.set(
-        seat.x,
-        seat.y + 0.015,
-        seat.z + 0.08,
-      );
-      personObject.rotation.set(
-        0,
-        audienceFacingScreenYaw + yaw,
-        0,
-      );
-      personObject.scale.setScalar(personScale);
-      personObject.updateMatrix();
-      matrix.copy(personObject.matrix);
-
-      meshes.forEach((mesh) => mesh?.setMatrixAt(index, matrix));
-    });
-
-    meshes.forEach((mesh) => {
-      if (!mesh) return;
-      mesh.instanceMatrix.needsUpdate = true;
-      mesh.computeBoundingSphere();
-    });
-  }, [matrix, personObject, seats]);
-
-  return (
-    <>
-      {parts.map((part, partIndex) => (
-        <instancedMesh
-          key={partIndex}
-          ref={(mesh) => {
-            meshRefs.current[partIndex] = mesh;
-          }}
-          args={[part.geometry, part.material, seats.length]}
-          castShadow={!isMobile}
-        />
-      ))}
-    </>
-  );
-}
-
-function Audience({
-  seats,
-  selectedSeat,
-  isMobile,
-}: Pick<CinemaSceneProps, "seats" | "selectedSeat" | "isMobile">) {
-  const models = useLoader(GLTFLoader, audienceModelUrls);
-  const audienceSeats = useMemo(
-    () =>
-      seats.filter(
-        (seat) =>
-          seat.id !== selectedSeat.id &&
-          seat.z < selectedSeat.z - 0.1,
-      ),
-    [seats, selectedSeat.id, selectedSeat.z],
-  );
-  const seatsByVariant = useMemo(
-    () =>
-      audienceVariants.map((_, variantIndex) =>
-        audienceSeats.filter(
-          (_, index) => index % audienceVariants.length === variantIndex,
-        ),
-      ),
-    [audienceSeats],
-  );
-  const modelParts = useMemo(
-    () =>
-      audienceVariants.map((variant) => {
-        const parts: AudienceModelPart[] = [];
-
-        models[variant.bodyIndex].scene.traverse((object) => {
-          if (!("isMesh" in object) || !object.isMesh) return;
-          const sourceMaterial = Array.isArray(object.material)
-            ? object.material[0]
-            : object.material;
-          const material = sourceMaterial.clone();
-          const geometry = mergeVertices(object.geometry.clone(), 0.0001);
-          geometry.computeVertexNormals();
-
-          if (material instanceof MeshStandardMaterial) {
-            const partColor =
-              object.name === "Skin"
-                ? "#654b3e"
-                : object.name === "Shirt"
-                  ? variant.shirtColor
-                  : object.name === "Pants"
-                    ? variant.pantsColor
-                    : "#211b19";
-            material.color.set(partColor);
-            material.roughness = 0.94;
-            material.metalness = 0;
-          }
-
-          parts.push({
-            geometry,
-            material,
-          });
-        });
-
-        const hairGeometry = new SphereGeometry(
-          0.45,
-          24,
-          16,
-          Math.PI * 0.9,
-          Math.PI * 1.2,
-          0,
-          Math.PI * 0.94,
-        );
-        hairGeometry.scale(...variant.hairScale);
-        hairGeometry.translate(0, 2.67, -0.75);
-        hairGeometry.computeVertexNormals();
-        parts.push({
-          geometry: hairGeometry,
-          material: new MeshStandardMaterial({
-            color: variant.hairColor,
-            roughness: 0.98,
-            metalness: 0,
-          }),
-        });
-
-        return parts;
-      }),
-    [models],
-  );
-
-  useEffect(
-    () => () => {
-      modelParts.flat().forEach(({ geometry, material }) => {
-        geometry.dispose();
-        material.dispose();
-      });
-    },
-    [modelParts],
-  );
-
-  return (
-    <group>
-      {modelParts.map((parts, variantIndex) => (
-        <AudienceVariant
-          key={audienceVariants[variantIndex].bodyIndex}
-          parts={parts}
-          seats={seatsByVariant[variantIndex]}
-          isMobile={isMobile}
-        />
-      ))}
-    </group>
-  );
-}
-
-useLoader.preload(GLTFLoader, audienceModelUrls);
-
 function SceneLighting({
   filmMode,
   isMobile,
@@ -1595,13 +1391,6 @@ function SceneContents(props: CinemaSceneProps) {
         selectedSeat={props.selectedSeat}
         filmMode={filmMode}
       />
-      {props.showAudience && (
-        <Audience
-          seats={props.seats}
-          selectedSeat={props.selectedSeat}
-          isMobile={isMobile}
-        />
-      )}
       <CameraRig
         auditorium={auditorium}
         selectedSeat={props.selectedSeat}

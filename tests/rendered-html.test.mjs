@@ -60,8 +60,7 @@ test("server-renders a selected auditorium simulator", async () => {
   assert.match(html, /真实座位排列/);
   assert.match(html, /role="tab"[^>]*>选座</);
   assert.match(html, /role="tab"[^>]*>影院信息</);
-  assert.match(html, /role="switch"[^>]*aria-checked="false"/);
-  assert.match(html, />坐人</);
+  assert.doesNotMatch(html, /显示观众|隐藏观众|>坐人</);
   assert.match(html, />关灯</);
   assert.doesNotMatch(html, /散场灯光|放映中/);
   assert.doesNotMatch(html, /逐排座号、空槽与过道来自实际选座页面/);

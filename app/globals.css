@@ -161,8 +161,7 @@ button {
   gap: 2px;
 }
 
-.projection-toggle,
-.audience-toggle {
+.projection-toggle {
   justify-self: end;
   min-height: 40px;
   padding: 0 15px;
@@ -183,24 +182,17 @@ button {
     border-color 280ms ease;
 }
 
-.projection-toggle:hover,
-.audience-toggle:hover {
+.projection-toggle:hover {
   background: var(--surface-raised);
 }
 
-.projection-toggle:active,
-.audience-toggle:active {
+.projection-toggle:active {
   transform: scale(0.98);
 }
 
 .projection-toggle.is-active {
   color: #fff0ee;
   background: rgba(123, 38, 38, 0.48);
-}
-
-.audience-toggle.is-active {
-  color: #9bc2ff;
-  background: rgba(51, 133, 255, 0.16);
 }
 
 .experience-layout {
@@ -918,13 +910,11 @@ a:focus-visible {
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .projection-toggle span,
-  .audience-toggle span {
+  .projection-toggle span {
     display: none;
   }
 
-  .projection-toggle,
-  .audience-toggle {
+  .projection-toggle {
     width: 40px;
     padding: 0;
   }
