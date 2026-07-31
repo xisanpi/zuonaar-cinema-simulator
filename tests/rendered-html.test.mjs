@@ -30,7 +30,6 @@ test("server-renders the cinema discovery page", async () => {
 
   const html = await response.text();
   assert.match(html, /<title>坐哪儿 \| 影院视野模拟器<\/title>/i);
-  assert.match(html, /先选择城市/);
   assert.match(html, /银幕从大到小/);
   assert.match(html, /距离从近到远/);
   assert.match(html, /杜比影院/);
@@ -41,7 +40,17 @@ test("server-renders the cinema discovery page", async () => {
   assert.match(html, /href="\/cinema\/hall-0018"/);
   assert.doesNotMatch(html, /href="\/cinema\/hall-0003"/);
   assert.match(html, /中国电影博物馆/);
-  assert.match(html, /我的位置/);
+  assert.match(html, /定位距离/);
+  assert.doesNotMatch(html, />制式</);
+  assert.doesNotMatch(html, />排序</);
+  assert.ok(
+    html.indexOf('aria-label="城市"') <
+      html.indexOf('aria-label="搜索影院或商圈"'),
+  );
+  assert.match(
+    html,
+    /<option value="screen" selected="">银幕从大到小<\/option>/,
+  );
   assert.match(html, /先看视野，再决定坐哪儿。/);
   assert.doesNotMatch(html, /在坐下之前，先看清这块银幕。/);
   assert.doesNotMatch(html, /codex-preview/);

@@ -2,13 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type PointerEvent as ReactPointerEvent,
-} from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   cinemaListings,
   citySummaries,
@@ -18,20 +12,16 @@ import {
 } from "./cinema-inventory";
 
 type FormatFilter = "all" | PremiumFormat;
-type SortMode = "recommended" | "screen" | "distance";
-type LocationMode = "city-center" | "device" | "manual";
+type SortMode = "screen" | "distance";
 
 type UserLocation = {
   latitude: number;
   longitude: number;
-  label: string;
-  mode: LocationMode;
 };
 
 const defaultCity =
   citySummaries.find((city) => city.name === "北京") ?? citySummaries[0];
 const cityStorageKey = "zuonaar-selected-city";
-const locationStorageKey = "zuonaar-user-location";
 
 function DbxIcon({
   name,
@@ -41,8 +31,6 @@ function DbxIcon({
     | "arrow-down"
     | "arrow-right"
     | "building"
-    | "close"
-    | "filter"
     | "location"
     | "screen"
     | "search"
@@ -125,10 +113,12 @@ function CinemaRow({
             </div>
             <p>{cinema.address}</p>
           </div>
-          <div className="distance-label">
-            <DbxIcon name="location" size={16} />
-            <span>{formatDistance(distance)}</span>
-          </div>
+          {distance !== null ? (
+            <div className="distance-label">
+              <DbxIcon name="location" size={16} />
+              <span>{formatDistance(distance)}</span>
+            </div>
+          ) : null}
         </div>
 
         <div className="format-line" aria-label="影厅制式">
@@ -221,19 +211,13 @@ function CinemaRow({
 export function CinemaFinder() {
   const [cityName, setCityName] = useState(defaultCity.name);
   const [formatFilter, setFormatFilter] = useState<FormatFilter>("all");
-  const [sortMode, setSortMode] = useState<SortMode>("recommended");
+  const [sortMode, setSortMode] = useState<SortMode>("screen");
   const [query, setQuery] = useState("");
-  const [locationOpen, setLocationOpen] = useState(false);
   const [locationStatus, setLocationStatus] = useState<
     "idle" | "loading" | "error"
   >("idle");
-  const [userLocation, setUserLocation] = useState<UserLocation>({
-    ...defaultCity.center,
-    label: `${defaultCity.name}市中心`,
-    mode: "city-center",
-  });
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [preferencesReady, setPreferencesReady] = useState(false);
-  const locationPanelRef = useRef<HTMLElement>(null);
 
   const city =
     citySummaries.find((item) => item.name === cityName) ?? defaultCity;
@@ -247,43 +231,8 @@ export function CinemaFinder() {
       window.localStorage.removeItem(cityStorageKey);
     }
 
-    const savedLocation = window.localStorage.getItem(locationStorageKey);
-    let parsedLocation: UserLocation | null = null;
-    if (savedLocation) {
-      try {
-        const parsed = JSON.parse(savedLocation) as UserLocation;
-        const validMode = ["city-center", "device", "manual"].includes(
-          parsed.mode,
-        );
-        if (
-          Number.isFinite(parsed.latitude) &&
-          Number.isFinite(parsed.longitude) &&
-          parsed.label &&
-          validMode
-        ) {
-          parsedLocation = parsed;
-        } else {
-          window.localStorage.removeItem(locationStorageKey);
-        }
-      } catch {
-        window.localStorage.removeItem(locationStorageKey);
-      }
-    }
-
     const timer = window.setTimeout(() => {
       if (savedCity) setCityName(savedCity.name);
-      if (
-        parsedLocation?.mode === "device" ||
-        parsedLocation?.mode === "manual"
-      ) {
-        setUserLocation(parsedLocation);
-      } else if (savedCity) {
-        setUserLocation({
-          ...savedCity.center,
-          label: `${savedCity.name}市中心`,
-          mode: "city-center",
-        });
-      }
       setPreferencesReady(true);
     }, 0);
     return () => window.clearTimeout(timer);
@@ -293,45 +242,6 @@ export function CinemaFinder() {
     if (!preferencesReady) return;
     window.localStorage.setItem(cityStorageKey, city.name);
   }, [city.name, preferencesReady]);
-
-  useEffect(() => {
-    if (!preferencesReady) return;
-    window.localStorage.setItem(
-      locationStorageKey,
-      JSON.stringify(userLocation),
-    );
-  }, [preferencesReady, userLocation]);
-
-  useEffect(() => {
-    if (!locationOpen) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const handleDialogKeys = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setLocationOpen(false);
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const controls = locationPanelRef.current?.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), select:not([disabled]), input:not([disabled]), a[href]',
-      );
-      if (!controls?.length) return;
-      const first = controls[0];
-      const last = controls[controls.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    window.addEventListener("keydown", handleDialogKeys);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleDialogKeys);
-    };
-  }, [locationOpen]);
 
   const results = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("zh-CN");
@@ -350,7 +260,9 @@ export function CinemaFinder() {
       )
       .map((cinema) => ({
         cinema,
-        distance: getCinemaDistance(cinema, userLocation),
+        distance: userLocation
+          ? getCinemaDistance(cinema, userLocation)
+          : null,
       }));
 
     return filtered.sort((left, right) => {
@@ -366,21 +278,7 @@ export function CinemaFinder() {
           (right.distance ?? Number.POSITIVE_INFINITY)
         );
       }
-      if (left.cinema.priorityRank !== right.cinema.priorityRank) {
-        return (
-          (left.cinema.priorityRank ?? Number.POSITIVE_INFINITY) -
-          (right.cinema.priorityRank ?? Number.POSITIVE_INFINITY)
-        );
-      }
-      const leftScore =
-        (left.cinema.largestScreenArea ?? 0) +
-        left.cinema.formats.length * 24 -
-        (left.distance ?? 0) * 0.4;
-      const rightScore =
-        (right.cinema.largestScreenArea ?? 0) +
-        right.cinema.formats.length * 24 -
-        (right.distance ?? 0) * 0.4;
-      return rightScore - leftScore;
+      return 0;
     });
   }, [city.name, formatFilter, query, sortMode, userLocation]);
 
@@ -389,13 +287,6 @@ export function CinemaFinder() {
       citySummaries.find((item) => item.name === nextCityName) ?? defaultCity;
     setCityName(nextCity.name);
     setQuery("");
-    if (userLocation.mode === "city-center") {
-      setUserLocation({
-        ...nextCity.center,
-        label: `${nextCity.name}市中心`,
-        mode: "city-center",
-      });
-    }
   };
 
   const useDeviceLocation = () => {
@@ -409,44 +300,12 @@ export function CinemaFinder() {
         setUserLocation({
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
-          label: "我的当前位置",
-          mode: "device",
         });
         setLocationStatus("idle");
-        setLocationOpen(false);
-        setSortMode("distance");
       },
       () => setLocationStatus("error"),
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
     );
-  };
-
-  const setLocationFromMap = (
-    event: ReactPointerEvent<HTMLButtonElement>,
-  ) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
-    const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
-    setUserLocation({
-      latitude: city.bounds.north - y * (city.bounds.north - city.bounds.south),
-      longitude: city.bounds.west + x * (city.bounds.east - city.bounds.west),
-      label: `${city.name}自选位置`,
-      mode: "manual",
-    });
-    setLocationStatus("idle");
-  };
-
-  const markerStyle = {
-    left: `${
-      ((userLocation.longitude - city.bounds.west) /
-        (city.bounds.east - city.bounds.west)) *
-      100
-    }%`,
-    top: `${
-      ((city.bounds.north - userLocation.latitude) /
-        (city.bounds.north - city.bounds.south)) *
-      100
-    }%`,
   };
 
   return (
@@ -465,15 +324,21 @@ export function CinemaFinder() {
         <button
           className="location-trigger"
           type="button"
-          onClick={() => setLocationOpen(true)}
+          onClick={useDeviceLocation}
+          disabled={locationStatus === "loading"}
+          aria-live="polite"
           data-dbd-component="button"
         >
           <DbxIcon name="location" size={18} />
-          <span>
-            <small>我的位置</small>
-            <strong>{userLocation.label}</strong>
-          </span>
-          <DbxIcon name="arrow-down" size={16} />
+          <strong>
+            {locationStatus === "loading"
+              ? "定位中…"
+              : locationStatus === "error"
+                ? "定位失败，重试"
+                : userLocation
+                  ? "已定位"
+                  : "定位距离"}
+          </strong>
         </button>
       </header>
 
@@ -482,14 +347,15 @@ export function CinemaFinder() {
           <span className="eyebrow">影院发现</span>
           <h1>先看视野，再决定坐哪儿。</h1>
           <p>
-            按城市查看已收录的 IMAX、杜比影院与精选巨幕，比较银幕、放映技术和距离，再进入真实比例的 3D 影厅。
+            按城市查看已收录的 IMAX、杜比影院与精选巨幕，比较银幕与放映技术，再进入真实比例的 3D 影厅。
           </p>
         </div>
+      </section>
 
-        <label className="city-picker">
-          <span>先选择城市</span>
-          <span className="city-picker-control">
-            <DbxIcon name="building" size={21} />
+      <section className="finder-workspace">
+        <div className="filter-bar" data-dbd-pattern="cinema-filter-bar">
+          <label className="city-picker">
+            <DbxIcon name="building" size={18} />
             <select
               aria-label="城市"
               value={city.name}
@@ -501,30 +367,9 @@ export function CinemaFinder() {
                 </option>
               ))}
             </select>
-          </span>
-          <small>
-            {city.cinemaCount} 家影院 · {city.hallCount} 个高规格影厅
-          </small>
-        </label>
-      </section>
-
-      <section className="finder-workspace">
-        <div className="filter-bar" data-dbd-pattern="cinema-filter-bar">
-          <label className="search-field" data-dbd-component="input">
-            <DbxIcon name="search" size={18} />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="搜索影院或商圈"
-              aria-label="搜索影院或商圈"
-            />
           </label>
 
           <div className="format-filters" aria-label="放映制式筛选">
-            <span className="filter-label">
-              <DbxIcon name="filter" size={17} />
-              制式
-            </span>
             {(
               [
                 ["all", "全部"],
@@ -550,16 +395,26 @@ export function CinemaFinder() {
 
           <label className="sort-field">
             <DbxIcon name="sort" size={18} />
-            <span>排序</span>
             <select
               value={sortMode}
               onChange={(event) => setSortMode(event.target.value as SortMode)}
               aria-label="影院排序"
             >
-              <option value="recommended">综合推荐</option>
               <option value="screen">银幕从大到小</option>
-              <option value="distance">距离从近到远</option>
+              <option value="distance" disabled={!userLocation}>
+                距离从近到远
+              </option>
             </select>
+          </label>
+
+          <label className="search-field" data-dbd-component="input">
+            <DbxIcon name="search" size={18} />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="搜索影院或商圈"
+              aria-label="搜索影院或商圈"
+            />
           </label>
         </div>
 
@@ -569,7 +424,8 @@ export function CinemaFinder() {
             <span>{results.length} 个结果</span>
           </div>
           <span>
-            距离为直线距离 · 数据库共收录 {cinemaListings.length} 家影院
+            {userLocation ? "距离为直线距离 · " : ""}
+            数据库共收录 {cinemaListings.length} 家影院
           </span>
         </div>
 
@@ -600,103 +456,6 @@ export function CinemaFinder() {
           )}
         </div>
       </section>
-
-      {locationOpen ? (
-        <div
-          className="location-overlay"
-          role="presentation"
-          onPointerDown={(event) => {
-            if (event.target === event.currentTarget) setLocationOpen(false);
-          }}
-        >
-          <section
-            className="location-panel"
-            ref={locationPanelRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="location-title"
-            data-dbd-pattern="panel-sheet"
-          >
-            <div className="location-panel-header">
-              <div>
-                <span>设置我的位置</span>
-                <h2 id="location-title">计算到影院的直线距离</h2>
-              </div>
-              <button
-                className="icon-button"
-                type="button"
-                onClick={() => setLocationOpen(false)}
-                aria-label="关闭位置设置"
-                autoFocus
-                data-dbd-component="button"
-              >
-                <DbxIcon name="close" size={19} />
-              </button>
-            </div>
-
-            <button
-              className="device-location-button"
-              type="button"
-              onClick={useDeviceLocation}
-              disabled={locationStatus === "loading"}
-              data-dbd-component="button"
-            >
-              <DbxIcon name="location" size={19} />
-              <span>
-                <strong>
-                  {locationStatus === "loading"
-                    ? "正在获取位置"
-                    : "使用设备当前位置"}
-                </strong>
-                <small>浏览器会询问一次定位权限</small>
-              </span>
-            </button>
-
-            {locationStatus === "error" ? (
-              <p className="location-error" role="alert">
-                无法读取设备位置，你仍可在下方地图中点击设定。
-              </p>
-            ) : null}
-
-            <div className="manual-location">
-              <div>
-                <strong>或在 {city.name} 范围内点选</strong>
-                <span>适合不想开启系统定位时使用</span>
-              </div>
-              <button
-                className="location-map"
-                type="button"
-                onPointerDown={setLocationFromMap}
-                aria-label={`在${city.name}示意地图中点选位置`}
-              >
-                <span className="map-road map-road-one" />
-                <span className="map-road map-road-two" />
-                <span className="map-road map-road-three" />
-                <span className="map-city-label">{city.name}</span>
-                <span className="map-user-marker" style={markerStyle}>
-                  <span />
-                </span>
-              </button>
-            </div>
-
-            <div className="location-panel-footer">
-              <span>
-                当前：<strong>{userLocation.label}</strong>
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setLocationOpen(false);
-                  setSortMode("distance");
-                }}
-                data-dbd-component="button"
-              >
-                保存并按距离排序
-              </button>
-            </div>
-          </section>
-        </div>
-      ) : null}
     </main>
   );
 }
