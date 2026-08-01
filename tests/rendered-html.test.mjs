@@ -89,7 +89,7 @@ test("server-renders a selected auditorium simulator", async () => {
   assert.match(html, /影院视野模拟器/);
   assert.match(html, /中国电影博物馆/);
   assert.match(html, /幕面光学模型/);
-  assert.match(html, /IMAX Laser Countdown/);
+  assert.match(html, /IMAX Countdown/);
   assert.doesNotMatch(html, /IMAX Laser Countdown（在线）/);
   assert.doesNotMatch(html, /IMAX 官方原片/);
   assert.match(html, /真实座位排列/);
