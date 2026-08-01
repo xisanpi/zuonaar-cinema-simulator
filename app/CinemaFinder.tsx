@@ -108,9 +108,25 @@ function CinemaRow({
   const needsReview = cinema.halls.some((item) => item.status !== "在册");
 
   return (
-    <article
-      className="cinema-result"
+    <Link
+      className={`cinema-result ${isEntering ? "is-entering" : ""}`}
+      href={`/cinema/${defaultHall.id}`}
+      aria-label={`进入${cinema.name}影厅`}
+      aria-busy={isEntering}
+      aria-disabled={isEntering}
       data-dbd-pattern="cinema-result-row"
+      data-navigation-state={isEntering ? "loading" : "idle"}
+      onClick={(event) => {
+        if (isEntering) {
+          event.preventDefault();
+          return;
+        }
+        window.sessionStorage.setItem(
+          listScrollStorageKey,
+          String(window.scrollY),
+        );
+      }}
+      onNavigate={() => setIsEntering(true)}
     >
       <div className="cinema-result-main">
         <div className="cinema-result-heading">
@@ -175,24 +191,10 @@ function CinemaRow({
             </span>
           </div>
         </div>
-        <Link
+        <span
           className={`primary-link ${isEntering ? "is-loading" : ""}`}
-          href={`/cinema/${defaultHall.id}`}
-          aria-busy={isEntering}
-          aria-disabled={isEntering}
-          data-navigation-state={isEntering ? "loading" : "idle"}
+          aria-hidden="true"
           data-dbd-component="button"
-          onClick={(event) => {
-            if (isEntering) {
-              event.preventDefault();
-              return;
-            }
-            window.sessionStorage.setItem(
-              listScrollStorageKey,
-              String(window.scrollY),
-            );
-          }}
-          onNavigate={() => setIsEntering(true)}
         >
           {isEntering ? (
             <>
@@ -205,9 +207,9 @@ function CinemaRow({
               <ArrowRight size={18} aria-hidden="true" />
             </>
           )}
-        </Link>
+        </span>
       </div>
-    </article>
+    </Link>
   );
 }
 

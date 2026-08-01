@@ -7,7 +7,6 @@ import {
 import seatLayoutsJson from "./seat-layouts.json";
 
 export type SeatStatus = "available" | "occupied";
-export type FilmSource = "local-demo" | "imax-countdown";
 
 export type Seat = {
   id: string;
@@ -97,29 +96,26 @@ export const cinemaSeatGeometry = {
 
 const estimatedRowSpacing = 1.2;
 const estimatedFirstRowZ = -3.8;
-const targetCenterHorizontalFov = 54;
-const minimumFrontDistanceInScreenWidths = 0.55;
+const minimumFirstRowScreenDistance = 8;
+const maximumFirstRowScreenDistance = 12;
+const compactScreenWidth = 12;
+const giantScreenWidth = 30;
 
-function distanceForHorizontalFov(screenWidth: number, horizontalFov: number) {
+function firstRowScreenDistance(screenWidth: number) {
+  const widthProgress = Math.max(
+    0,
+    Math.min(
+      1,
+      (screenWidth - compactScreenWidth) /
+        (giantScreenWidth - compactScreenWidth),
+    ),
+  );
+
   return (
-    screenWidth /
-    (2 * Math.tan((horizontalFov * Math.PI) / 360))
+    minimumFirstRowScreenDistance +
+    widthProgress *
+      (maximumFirstRowScreenDistance - minimumFirstRowScreenDistance)
   );
-}
-
-function calibratedScreenZ(screenWidth: number, rowCount: number) {
-  const centerRow = Math.floor(rowCount / 2);
-  const centerRowZ =
-    estimatedFirstRowZ + centerRow * estimatedRowSpacing;
-  const targetCenterDistance = distanceForHorizontalFov(
-    screenWidth,
-    targetCenterHorizontalFov,
-  );
-  const minimumCenterDistance =
-    screenWidth * minimumFrontDistanceInScreenWidths +
-    centerRow * estimatedRowSpacing;
-
-  return centerRowZ - Math.max(targetCenterDistance, minimumCenterDistance);
 }
 
 function approximateRows(hall: InventoryHall) {
@@ -184,6 +180,7 @@ function hallToAuditorium(hall: InventoryHall): Auditorium {
         } 座存在版本或统计口径差异`
       : "";
   const rowCount = rowSeatCounts.length;
+  const estimatedFrontDistance = firstRowScreenDistance(screenWidth);
 
   return {
     id: hall.id,
@@ -196,7 +193,7 @@ function hallToAuditorium(hall: InventoryHall): Auditorium {
     screenWidth,
     screenHeight,
     screenBottom: 1.5,
-    screenZ: calibratedScreenZ(screenWidth, rowCount),
+    screenZ: estimatedFirstRowZ - estimatedFrontDistance,
     screenAspect: hall.ratio || "比例待补",
     projectionTechnology: hall.projection || hall.brand,
     projectionDetails: projectionDetails(hall),
@@ -216,8 +213,8 @@ function hallToAuditorium(hall: InventoryHall): Auditorium {
     seatingWidth,
     seatLayout,
     sourceNote: seatLayout
-      ? `银幕规格与放映制式来自公开数据库；逐排座号和空槽来自猫眼选座网格抓取${capturedCountNote}；厅深按默认中排 54° 水平视角校准，座间距、排距和高差仍为几何估算`
-      : "银幕规格、放映制式与容量来自公开数据库；该厅尚无逐排抓取数据，座位排列按容量近似；厅深按默认中排 54° 水平视角校准，不代表影院官方测绘",
+      ? `银幕规格与放映制式来自公开数据库；逐排座号和空槽来自猫眼选座网格抓取${capturedCountNote}；厅深按银幕宽度估算，第一排距银幕约 ${estimatedFrontDistance.toFixed(1)} m（范围 8–12 m），座间距、排距和高差仍为几何估算`
+      : `银幕规格、放映制式与容量来自公开数据库；该厅尚无逐排抓取数据，座位排列按容量近似；厅深按银幕宽度估算，第一排距银幕约 ${estimatedFrontDistance.toFixed(1)} m（范围 8–12 m），不代表影院官方测绘`,
   };
 }
 

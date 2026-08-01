@@ -14,7 +14,7 @@ IMAX、Dolby、影院名称及相关标识归各自权利人所有。本项目�
 
 ## 媒体
 
-外部倒计时短片通过第三方视频服务嵌入，并未随源代码授权。`public/cinema-demo.mp4` 和 `public/og.png` 也不包含在 MIT License 授权范围内，除非其文件旁另有明确许可说明。
+`public/cinema-demo.mp4`、`public/imax-countdown.mp4` 和 `public/og.png` 不包含在 MIT License 授权范围内，除非其文件旁另有明确许可说明。
 
 ## 开源依赖
 

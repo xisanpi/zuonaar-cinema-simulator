@@ -26,7 +26,6 @@ import {
   cinemas,
   getAuditoriumById,
   getSeatMetrics,
-  type FilmSource,
   type Seat,
 } from "./cinema-data";
 
@@ -89,8 +88,7 @@ export function CinemaExperience({
   );
   const [filmMode, setFilmMode] = useState(false);
   const [playing, setPlaying] = useState(false);
-  const [filmSource, setFilmSource] =
-    useState<FilmSource>("imax-countdown");
+  const [playbackToken, setPlaybackToken] = useState(0);
   const [isSeatPanelCollapsed, setIsSeatPanelCollapsed] = useState(false);
   const [isMobilePanelOpen, setIsMobilePanelOpen] = useState(false);
   const [mobilePanelTab, setMobilePanelTab] =
@@ -148,11 +146,10 @@ export function CinemaExperience({
   };
 
   const toggleFilmMode = () => {
-    setFilmMode((current) => {
-      const next = !current;
-      setPlaying(next);
-      return next;
-    });
+    const nextFilmMode = !filmMode;
+    setFilmMode(nextFilmMode);
+    setPlaying(nextFilmMode);
+    if (nextFilmMode) setPlaybackToken((current) => current + 1);
   };
 
   const showMobilePanelTab = (tab: MobilePanelTab) => {
@@ -204,7 +201,7 @@ export function CinemaExperience({
             selectedSeat={selectedSeat}
             filmMode={filmMode}
             playing={playing}
-            filmSource={filmSource}
+            playbackToken={playbackToken}
             viewCommand={idleViewCommand}
             isMobile={isMobile}
           />
@@ -215,20 +212,8 @@ export function CinemaExperience({
 
           <div className="scene-controls">
             <div className="film-picker" data-dbd-pattern="film-picker">
-              <label htmlFor="film-source">影片</label>
-              <select
-                id="film-source"
-                aria-label="影片"
-                value={filmSource}
-                onChange={(event) => {
-                  setFilmSource(event.target.value as FilmSource);
-                  setPlaying(false);
-                  setFilmMode(false);
-                }}
-              >
-                <option value="local-demo">自然演示片</option>
-                <option value="imax-countdown">IMAX Laser Countdown</option>
-              </select>
+              <span className="film-picker-label">影片</span>
+              <strong>IMAX Countdown</strong>
             </div>
 
             <button
@@ -237,23 +222,23 @@ export function CinemaExperience({
               data-dbd-component="button"
               data-dbd-variant="icon-only"
               onClick={() => {
+                const nextPlaying = !playing;
                 if (!filmMode) setFilmMode(true);
-                setPlaying((current) => !current);
+                setPlaying(nextPlaying);
+                if (nextPlaying) {
+                  setPlaybackToken((current) => current + 1);
+                }
               }}
               aria-pressed={playing}
               aria-label={
                 playing
                   ? "暂停影片"
-                  : filmSource === "imax-countdown"
-                    ? "播放倒计时"
-                    : "播放短片"
+                  : "播放短片"
               }
               title={
                 playing
                   ? "暂停影片"
-                  : filmSource === "imax-countdown"
-                    ? "播放倒计时"
-                    : "播放短片"
+                  : "播放短片"
               }
             >
               {playing ? (

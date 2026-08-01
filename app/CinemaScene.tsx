@@ -30,6 +30,7 @@ import {
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import {
   Suspense,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -40,7 +41,6 @@ import {
   cinemaSeatGeometry,
   getSeatEyeY,
   type Auditorium,
-  type FilmSource,
   type Seat,
 } from "./cinema-data";
 
@@ -56,16 +56,14 @@ type CinemaSceneProps = {
   selectedSeat: Seat;
   filmMode: boolean;
   playing: boolean;
-  filmSource: FilmSource;
+  playbackToken: number;
   viewCommand: ViewCommand;
   isMobile: boolean;
 };
 
 const upVector = new Vector3(0, 1, 0);
-const countdownPreviewId = "666393527";
-const countdownPreviewEmbed = `https://player.vimeo.com/video/${countdownPreviewId}?autoplay=1&muted=1&background=1&loop=1&autopause=0&dnt=1`;
-const countdownPreviewWidth = 1440;
-const countdownPreviewHeight = 1080;
+const screenOverlayWidth = 1440;
+const screenOverlayHeight = 1080;
 const lightingTransitionSpeed = 3.2;
 const cameraHorizontalFov = 62;
 const smoothFactor = (delta: number) =>
@@ -300,7 +298,7 @@ function quadTransform(
   )`;
 }
 
-function OnlineVideoTracker({
+function ScreenMediaOverlayTracker({
   auditorium,
   active,
   overlayRef,
@@ -362,8 +360,8 @@ function OnlineVideoTracker({
         projected[2],
         projected[3],
       ],
-      countdownPreviewWidth,
-      countdownPreviewHeight,
+      screenOverlayWidth,
+      screenOverlayHeight,
     );
 
     if (!transform) {
@@ -554,10 +552,14 @@ function VideoSurface({
   auditorium,
   active,
   playing,
-}: Pick<CinemaSceneProps, "auditorium" | "playing"> & { active: boolean }) {
+  onReady,
+}: Pick<CinemaSceneProps, "auditorium" | "playing"> & {
+  active: boolean;
+  onReady: () => void;
+}) {
   const texture = useMemo(() => {
     const video = document.createElement("video");
-    video.src = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/cinema-demo.mp4`;
+    video.src = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/imax-countdown.mp4`;
     video.crossOrigin = "anonymous";
     video.loop = true;
     video.muted = true;
@@ -581,13 +583,47 @@ function VideoSurface({
 
   useEffect(() => {
     const video = texture.image as HTMLVideoElement;
+    let frameCallbackId: number | null = null;
+    let firstFrameReported = false;
+
+    const reportFirstFrame = () => {
+      if (!active || !playing || firstFrameReported) return;
+      firstFrameReported = true;
+      onReady();
+    };
+    const waitForPaintedFrame = () => {
+      if (!active || !playing || firstFrameReported) return;
+      if (typeof video.requestVideoFrameCallback === "function") {
+        if (frameCallbackId !== null) return;
+        frameCallbackId = video.requestVideoFrameCallback(() => {
+          frameCallbackId = null;
+          reportFirstFrame();
+        });
+      } else if (video.currentTime > 0) {
+        reportFirstFrame();
+      }
+    };
+
+    video.addEventListener("playing", waitForPaintedFrame);
+    video.addEventListener("timeupdate", waitForPaintedFrame);
 
     if (active && playing) {
-      void video.play().catch(() => undefined);
+      void video.play().then(waitForPaintedFrame).catch(() => undefined);
     } else {
       video.pause();
     }
-  }, [active, playing, texture]);
+
+    return () => {
+      video.removeEventListener("playing", waitForPaintedFrame);
+      video.removeEventListener("timeupdate", waitForPaintedFrame);
+      if (
+        frameCallbackId !== null &&
+        typeof video.cancelVideoFrameCallback === "function"
+      ) {
+        video.cancelVideoFrameCallback(frameCallbackId);
+      }
+    };
+  }, [active, onReady, playing, texture]);
 
   const screenAspect = auditorium.screenWidth / auditorium.screenHeight;
   const videoAspect = 16 / 9;
@@ -644,17 +680,20 @@ function Screen({
   auditorium,
   filmMode,
   playing,
-  filmSource,
+  onFilmReady,
 }: Pick<
   CinemaSceneProps,
-  "auditorium" | "filmMode" | "playing" | "filmSource"
->) {
+  "auditorium" | "filmMode" | "playing"
+> & { onFilmReady: () => void }) {
   const centerY = auditorium.screenBottom + auditorium.screenHeight / 2;
   const screenTop = auditorium.screenBottom + auditorium.screenHeight;
   const workLightOffsets = [-0.32, 0, 0.32];
   const workLightRefs = useRef<Array<SpotLight | null>>([]);
   const bulbMaterialRefs = useRef<Array<MeshBasicMaterial | null>>([]);
   const filmBounceRef = useRef<PointLight>(null);
+  const screenSurroundMaterialRef = useRef<MeshPhysicalMaterial>(null);
+  const screenSurroundLitColor = useMemo(() => new Color("#111315"), []);
+  const screenSurroundDarkColor = useMemo(() => new Color("#000000"), []);
   const [initialHouseLights] = useState(() => (filmMode ? 0 : 1));
 
   useFrame((_, delta) => {
@@ -677,6 +716,12 @@ function Screen({
       filmBounceRef.current.intensity +=
         (target - filmBounceRef.current.intensity) * factor;
     }
+    if (screenSurroundMaterialRef.current) {
+      screenSurroundMaterialRef.current.color.lerp(
+        filmMode ? screenSurroundDarkColor : screenSurroundLitColor,
+        factor,
+      );
+    }
   });
 
   return (
@@ -687,13 +732,20 @@ function Screen({
         <boxGeometry
           args={[auditorium.screenWidth + 0.8, auditorium.screenHeight + 0.8, 0.3]}
         />
-        <meshStandardMaterial color="#111315" roughness={0.9} />
+        <meshPhysicalMaterial
+          ref={screenSurroundMaterialRef}
+          color={initialHouseLights ? "#111315" : "#000000"}
+          roughness={1}
+          metalness={0}
+          specularIntensity={0}
+        />
       </mesh>
       <ScreenSurface auditorium={auditorium} blackout={filmMode} />
       <VideoSurface
         auditorium={auditorium}
-        active={filmMode && playing && filmSource === "local-demo"}
+        active={filmMode && playing}
         playing={playing}
+        onReady={onFilmReady}
       />
       {workLightOffsets.map((offset, index) => {
         const lightX = auditorium.screenWidth * offset;
@@ -1370,7 +1422,9 @@ function SceneLighting({
   );
 }
 
-function SceneContents(props: CinemaSceneProps) {
+function SceneContents(
+  props: CinemaSceneProps & { onFilmReady: () => void },
+) {
   const { auditorium, filmMode, isMobile } = props;
 
   return (
@@ -1380,7 +1434,7 @@ function SceneContents(props: CinemaSceneProps) {
         auditorium={auditorium}
         filmMode={filmMode}
         playing={props.playing}
-        filmSource={props.filmSource}
+        onFilmReady={props.onFilmReady}
       />
       <AuditoriumArchitecture
         auditorium={auditorium}
@@ -1401,11 +1455,16 @@ function SceneContents(props: CinemaSceneProps) {
 }
 
 export function CinemaScene(props: CinemaSceneProps) {
-  const onlineOverlayRef = useRef<HTMLDivElement>(null);
-  const onlineVideoActive =
-    props.filmMode &&
-    props.playing &&
-    props.filmSource === "imax-countdown";
+  const screenMediaOverlayRef = useRef<HTMLDivElement>(null);
+  const [readyPlaybackToken, setReadyPlaybackToken] = useState<number | null>(
+    null,
+  );
+  const filmReady = readyPlaybackToken === props.playbackToken;
+  const markFilmReady = useCallback(
+    () => setReadyPlaybackToken(props.playbackToken),
+    [props.playbackToken],
+  );
+  const screenMediaActive = props.filmMode && props.playing;
   const initialCameraPosition: [number, number, number] = [
     props.selectedSeat.x,
     getSeatEyeY(props.selectedSeat),
@@ -1434,26 +1493,33 @@ export function CinemaScene(props: CinemaSceneProps) {
         }}
       >
         <Suspense fallback={null}>
-          <SceneContents {...props} />
-          <OnlineVideoTracker
+          <SceneContents {...props} onFilmReady={markFilmReady} />
+          <ScreenMediaOverlayTracker
             auditorium={props.auditorium}
-            active={onlineVideoActive}
-            overlayRef={onlineOverlayRef}
+            active={screenMediaActive}
+            overlayRef={screenMediaOverlayRef}
           />
         </Suspense>
       </Canvas>
       <div
-        ref={onlineOverlayRef}
-        className="online-video-overlay"
-        aria-hidden={!onlineVideoActive}
+        ref={screenMediaOverlayRef}
+        className={`screen-media-overlay ${
+          filmReady ? "is-ready" : "is-loading"
+        }`}
+        aria-hidden={!screenMediaActive}
       >
-        {onlineVideoActive && (
-          <iframe
-            src={countdownPreviewEmbed}
-            title="IMAX Laser Countdown"
-            allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-            referrerPolicy="strict-origin-when-cross-origin"
-          />
+        {screenMediaActive && (
+          <>
+            <div
+              className="film-loading-state"
+              role="status"
+              aria-live="polite"
+              aria-hidden={filmReady}
+            >
+              <span className="film-loading-sweep" aria-hidden="true" />
+              <span className="film-loading-copy">影片准备中</span>
+            </div>
+          </>
         )}
       </div>
     </>
