@@ -79,6 +79,25 @@ function getCinemaDistance(
   });
 }
 
+function getCityForLocation(location: UserLocation) {
+  const citiesContainingLocation = citySummaries.filter(
+    (city) =>
+      location.latitude <= city.bounds.north &&
+      location.latitude >= city.bounds.south &&
+      location.longitude <= city.bounds.east &&
+      location.longitude >= city.bounds.west,
+  );
+  const candidates = citiesContainingLocation.length
+    ? citiesContainingLocation
+    : citySummaries;
+
+  return candidates.reduce((nearestCity, candidate) => {
+    const nearestDistance = haversineDistanceKm(location, nearestCity.center);
+    const candidateDistance = haversineDistanceKm(location, candidate.center);
+    return candidateDistance < nearestDistance ? candidate : nearestCity;
+  }, candidates[0] ?? defaultCity);
+}
+
 function CinemaRow({
   cinema,
   distance,
@@ -102,11 +121,6 @@ function CinemaRow({
           <div>
             <div className="cinema-name-line">
               <h2>{cinema.name}</h2>
-              {cinema.priorityRank !== null ? (
-                <span className="status-tag status-tag-priority">
-                  首批重点 #{cinema.priorityRank}
-                </span>
-              ) : null}
               {needsReview ? (
                 <span className="status-tag status-tag-review">需复核</span>
               ) : null}
@@ -297,10 +311,12 @@ export function CinemaFinder() {
     setLocationStatus("loading");
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setUserLocation({
+        const nextLocation = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
-        });
+        };
+        setUserLocation(nextLocation);
+        selectCity(getCityForLocation(nextLocation).name);
         setLocationStatus("idle");
       },
       () => setLocationStatus("error"),
