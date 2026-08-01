@@ -1460,12 +1460,6 @@ a:focus-visible {
   color: var(--muted);
 }
 
-.status-tag-priority {
-  border: 1px solid rgba(228, 91, 83, 0.26);
-  background: rgba(208, 75, 67, 0.1);
-  color: var(--accent-strong);
-}
-
 .distance-label {
   flex: 0 0 auto;
   display: inline-flex;
