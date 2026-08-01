@@ -342,18 +342,6 @@ button {
   outline: 0;
 }
 
-.film-picker a {
-  flex: 0 0 auto;
-  color: #e7aaa5;
-  font-size: 11px;
-  line-height: 1.2;
-  text-decoration: none;
-}
-
-.film-picker a:hover {
-  color: #ffd2ce;
-}
-
 .play-control:active {
   transform: scale(0.97);
 }
@@ -763,16 +751,6 @@ button {
   font-size: 11px;
 }
 
-.seat-reading p {
-  margin: 5px 0 0;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.35;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .seat-reading dl {
   margin: 7px 0 0;
   padding: 6px 0 0;
@@ -899,7 +877,6 @@ a:focus-visible {
     height: 9px;
   }
 
-  .seat-reading p,
   .data-note {
     display: none;
   }
@@ -1232,15 +1209,6 @@ a:focus-visible {
   max-width: none;
 }
 
-.eyebrow {
-  display: block;
-  margin-bottom: 12px;
-  color: var(--accent-strong);
-  font-size: 12px;
-  font-weight: 650;
-  letter-spacing: 0.12em;
-}
-
 .intro-copy h1 {
   margin: 0;
   font-size: clamp(26px, 4vw, 50px);
@@ -1300,6 +1268,12 @@ a:focus-visible {
   backdrop-filter: blur(14px);
 }
 
+.search-combobox {
+  min-width: 0;
+  position: relative;
+  z-index: 4;
+}
+
 .search-field {
   min-width: 0;
   min-height: 42px;
@@ -1329,6 +1303,80 @@ a:focus-visible {
 
 .search-field input::placeholder {
   color: var(--subtle);
+}
+
+.city-search-menu {
+  width: 100%;
+  max-height: min(360px, calc(100dvh - 120px));
+  padding: 4px;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface-raised);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.38);
+}
+
+.city-search-menu-title {
+  min-height: 32px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  color: var(--subtle);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.city-search-option {
+  width: 100%;
+  min-height: 48px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.city-search-option:hover,
+.city-search-option.is-active {
+  background: var(--surface-soft);
+}
+
+.city-search-option:focus-visible {
+  outline: 2px solid var(--support-info);
+  outline-offset: -2px;
+}
+
+.city-search-option-copy {
+  min-width: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.city-search-option-copy strong {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.city-search-option-copy small,
+.city-search-option-count {
+  color: var(--subtle);
+  font-size: 11px;
+}
+
+.city-search-option-count {
+  flex: 0 0 auto;
 }
 
 .format-filters {
@@ -1469,10 +1517,6 @@ a:focus-visible {
   font-size: 12px;
 }
 
-.cinema-hall-meta {
-  margin-top: 10px;
-}
-
 .format-tag {
   padding: 4px 7px;
   border: 1px solid rgba(228, 91, 83, 0.28);
@@ -1488,11 +1532,6 @@ a:focus-visible {
   border-color: var(--line-strong);
   background: var(--surface-soft);
   color: var(--muted);
-}
-
-.hall-count {
-  color: var(--subtle);
-  font-size: 10px;
 }
 
 .cinema-specs {
@@ -1669,7 +1708,7 @@ a:focus-visible {
     grid-row: 2;
   }
 
-  .search-field {
+  .search-combobox {
     grid-column: 2;
     grid-row: 2;
   }
@@ -1758,10 +1797,14 @@ a:focus-visible {
     gap: 6px;
   }
 
-  .search-field {
+  .search-combobox {
     min-height: 44px;
     grid-column: 1 / -1;
     grid-row: 3;
+  }
+
+  .city-search-menu {
+    max-height: min(320px, calc(100dvh - 96px));
   }
 
   .sort-field select {

@@ -18,6 +18,12 @@ import {
   type CinemaListing,
   type PremiumFormat,
 } from "./cinema-inventory";
+import {
+  buildPinyinSearchIndex,
+  getPinyinLabel,
+  matchesPinyinSearch,
+  normalizeSearchValue,
+} from "./search-utils.mjs";
 
 type FormatFilter = "all" | PremiumFormat;
 type SortMode = "screen" | "distance";
@@ -31,6 +37,15 @@ const defaultCity =
   citySummaries.find((city) => city.name === "北京") ?? citySummaries[0];
 const cityStorageKey = "zuonaar-selected-city";
 const listScrollStorageKey = "zuonaar-cinema-list-scroll-y";
+const citySearchIndexes = new Map(
+  citySummaries.map((city) => [city.name, buildPinyinSearchIndex(city.name)]),
+);
+const cinemaSearchIndexes = new Map(
+  cinemaListings.map((cinema) => [
+    cinema.id,
+    buildPinyinSearchIndex(`${cinema.name} ${cinema.address}`),
+  ]),
+);
 
 function formatArea(value: number | null) {
   if (!value) return "尺寸待补";
@@ -112,11 +127,6 @@ function CinemaRow({
                   {formatLabel(format)}
                 </span>
               ))}
-              {cinema.priorityRank !== null ? (
-                <span className="status-tag status-tag-priority">
-                  首批重点 #{cinema.priorityRank}
-                </span>
-              ) : null}
               {needsReview ? (
                 <span className="status-tag status-tag-review">需复核</span>
               ) : null}
@@ -130,12 +140,6 @@ function CinemaRow({
             </div>
           ) : null}
         </div>
-
-        {cinema.halls.length > 1 ? (
-          <div className="cinema-hall-meta">
-            <span className="hall-count">{cinema.halls.length} 个高规格影厅</span>
-          </div>
-        ) : null}
 
         <dl className="cinema-specs">
           <div>
@@ -212,6 +216,8 @@ export function CinemaFinder() {
   const [formatFilter, setFormatFilter] = useState<FormatFilter>("all");
   const [sortMode, setSortMode] = useState<SortMode>("screen");
   const [query, setQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [activeCityIndex, setActiveCityIndex] = useState(0);
   const [locationStatus, setLocationStatus] = useState<
     "idle" | "loading" | "error"
   >("idle");
@@ -259,8 +265,30 @@ export function CinemaFinder() {
     return () => window.cancelAnimationFrame(frame);
   }, [preferencesReady]);
 
+  const cityMatches = useMemo(() => {
+    const normalizedQuery = normalizeSearchValue(query);
+    if (!normalizedQuery) return [];
+
+    return citySummaries
+      .filter((item) =>
+        matchesPinyinSearch(citySearchIndexes.get(item.name) ?? "", query),
+      )
+      .sort((left, right) => {
+        const leftIndex = citySearchIndexes.get(left.name) ?? "";
+        const rightIndex = citySearchIndexes.get(right.name) ?? "";
+        const leftStarts = leftIndex
+          .split("|")
+          .some((term) => term.startsWith(normalizedQuery));
+        const rightStarts = rightIndex
+          .split("|")
+          .some((term) => term.startsWith(normalizedQuery));
+        if (leftStarts !== rightStarts) return leftStarts ? -1 : 1;
+        return right.cinemaCount - left.cinemaCount;
+      })
+      .slice(0, 6);
+  }, [query]);
+
   const results = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase("zh-CN");
     const filtered = cinemaListings
       .filter((cinema) => cinema.city === city.name)
       .filter(
@@ -269,10 +297,10 @@ export function CinemaFinder() {
       )
       .filter(
         (cinema) =>
-          !normalizedQuery ||
-          `${cinema.name}${cinema.address}`
-            .toLocaleLowerCase("zh-CN")
-            .includes(normalizedQuery),
+          matchesPinyinSearch(
+            cinemaSearchIndexes.get(cinema.id) ?? "",
+            query,
+          ),
       )
       .map((cinema) => ({
         cinema,
@@ -303,6 +331,7 @@ export function CinemaFinder() {
       citySummaries.find((item) => item.name === nextCityName) ?? defaultCity;
     setCityName(nextCity.name);
     setQuery("");
+    setSearchFocused(false);
   };
 
   const useDeviceLocation = () => {
@@ -362,7 +391,6 @@ export function CinemaFinder() {
 
       <section className="finder-intro" data-dbd-zone="cinema-discovery-header">
         <div className="intro-copy">
-          <span className="eyebrow">影院发现</span>
           <h1>先看视野，再决定坐哪儿。</h1>
           <p>
             按城市查看已收录的 IMAX、杜比影院与精选巨幕，比较银幕与放映技术，再进入真实比例的 3D 影厅。
@@ -425,15 +453,95 @@ export function CinemaFinder() {
             </select>
           </label>
 
-          <label className="search-field" data-dbd-component="input">
-            <MagnifyingGlass size={18} aria-hidden="true" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="搜索影院或商圈"
-              aria-label="搜索影院或商圈"
-            />
-          </label>
+          <div
+            className="search-combobox"
+            data-dbd-pattern="pc-command-search"
+          >
+            <label className="search-field" data-dbd-component="input">
+              <MagnifyingGlass size={18} aria-hidden="true" />
+              <input
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setSearchFocused(true);
+                  setActiveCityIndex(0);
+                }}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setSearchFocused(false)}
+                onKeyDown={(event) => {
+                  if (!cityMatches.length) return;
+                  if (event.key === "ArrowDown") {
+                    event.preventDefault();
+                    setSearchFocused(true);
+                    setActiveCityIndex(
+                      (current) => (current + 1) % cityMatches.length,
+                    );
+                  } else if (event.key === "ArrowUp") {
+                    event.preventDefault();
+                    setSearchFocused(true);
+                    setActiveCityIndex(
+                      (current) =>
+                        (current - 1 + cityMatches.length) % cityMatches.length,
+                    );
+                  } else if (event.key === "Enter" && searchFocused) {
+                    event.preventDefault();
+                    const activeCity = cityMatches[activeCityIndex];
+                    if (activeCity) selectCity(activeCity.name);
+                  } else if (event.key === "Escape") {
+                    setSearchFocused(false);
+                  }
+                }}
+                placeholder="搜索城市、影院或商圈（支持拼音）"
+                aria-label="搜索城市、影院或商圈"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded={searchFocused && cityMatches.length > 0}
+                aria-controls="city-search-suggestions"
+                aria-activedescendant={
+                  searchFocused && cityMatches.length
+                    ? `city-search-option-${activeCityIndex}`
+                    : undefined
+                }
+              />
+            </label>
+
+            {searchFocused && cityMatches.length ? (
+              <div
+                className="city-search-menu"
+                id="city-search-suggestions"
+                role="listbox"
+                aria-label="匹配城市"
+                data-dbd-component="menu"
+              >
+                <span className="city-search-menu-title">切换城市</span>
+                {cityMatches.map((item, index) => (
+                  <button
+                    className={`city-search-option ${
+                      index === activeCityIndex ? "is-active" : ""
+                    }`}
+                    id={`city-search-option-${index}`}
+                    type="button"
+                    role="option"
+                    aria-selected={index === activeCityIndex}
+                    key={item.name}
+                    onPointerDown={(event) => event.preventDefault()}
+                    onMouseEnter={() => setActiveCityIndex(index)}
+                    onClick={() => selectCity(item.name)}
+                    data-dbd-component="button"
+                  >
+                    <Buildings size={18} aria-hidden="true" />
+                    <span className="city-search-option-copy">
+                      <strong>{item.name}</strong>
+                      <small>{getPinyinLabel(item.name)}</small>
+                    </span>
+                    <span className="city-search-option-count">
+                      {item.cinemaCount} 家
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <div className="cinema-results">

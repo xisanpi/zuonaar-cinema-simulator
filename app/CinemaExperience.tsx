@@ -229,15 +229,6 @@ export function CinemaExperience({
                 <option value="local-demo">自然演示片</option>
                 <option value="imax-countdown">IMAX Laser Countdown</option>
               </select>
-              {filmSource === "imax-countdown" && (
-                <a
-                  href="https://www.youtube.com/watch?v=n5HbQ7vCvDY"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  IMAX 官方原片 ↗
-                </a>
-              )}
             </div>
 
             <button
@@ -542,7 +533,6 @@ export function CinemaExperience({
                   <dd>{metrics.distance.toFixed(1)} m</dd>
                 </div>
               </dl>
-              <p title={metrics.note}>{metrics.note}</p>
             </section>
             </div>
 

@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import {
+  buildPinyinSearchIndex,
+  matchesPinyinSearch,
+} from "../app/search-utils.mjs";
 
 async function render(pathname = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
@@ -48,8 +52,13 @@ test("server-renders the cinema discovery page", async () => {
   assert.doesNotMatch(html, />排序</);
   assert.ok(
     html.indexOf('aria-label="城市"') <
-      html.indexOf('aria-label="搜索影院或商圈"'),
+      html.indexOf('aria-label="搜索城市、影院或商圈"'),
   );
+  assert.match(html, /搜索城市、影院或商圈（支持拼音）/);
+  assert.match(html, /data-dbd-pattern="pc-command-search"/);
+  assert.doesNotMatch(html, /首批重点/);
+  assert.doesNotMatch(html, /个高规格影厅/);
+  assert.doesNotMatch(html, /影院发现/);
   assert.match(
     html,
     /<option value="screen" selected="">银幕从大到小<\/option>/,
@@ -58,6 +67,18 @@ test("server-renders the cinema discovery page", async () => {
   assert.doesNotMatch(html, /在坐下之前，先看清这块银幕。/);
   assert.doesNotMatch(html, /codex-preview/);
   assert.doesNotMatch(html, /Your site is taking shape/);
+});
+
+test("matches cities and cinemas with full pinyin and initials", () => {
+  const beijing = buildPinyinSearchIndex("北京");
+  const museum = buildPinyinSearchIndex("中国电影博物馆 南影路9号");
+
+  assert.equal(matchesPinyinSearch(beijing, "beijing"), true);
+  assert.equal(matchesPinyinSearch(beijing, "bj"), true);
+  assert.equal(matchesPinyinSearch(beijing, "北京"), true);
+  assert.equal(matchesPinyinSearch(museum, "zhongguodianying"), true);
+  assert.equal(matchesPinyinSearch(museum, "zgdybwg"), true);
+  assert.equal(matchesPinyinSearch(museum, "上海"), false);
 });
 
 test("server-renders a selected auditorium simulator", async () => {
@@ -70,6 +91,7 @@ test("server-renders a selected auditorium simulator", async () => {
   assert.match(html, /幕面光学模型/);
   assert.match(html, /IMAX Laser Countdown/);
   assert.doesNotMatch(html, /IMAX Laser Countdown（在线）/);
+  assert.doesNotMatch(html, /IMAX 官方原片/);
   assert.match(html, /真实座位排列/);
   assert.match(html, /role="tab"[^>]*>选座</);
   assert.match(html, /role="tab"[^>]*>影院信息</);
@@ -82,6 +104,7 @@ test("server-renders a selected auditorium simulator", async () => {
   assert.doesNotMatch(html, /自由视角/);
   assert.doesNotMatch(html, /从这里看/);
   assert.doesNotMatch(html, />全厅</);
+  assert.doesNotMatch(html, /银幕占比和仰角都比较自然/);
 });
 
 test("multi-format cinemas default to IMAX and use the title as the switcher", async () => {

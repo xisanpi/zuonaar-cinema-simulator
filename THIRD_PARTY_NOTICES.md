@@ -18,4 +18,4 @@ IMAX、Dolby、影院名称及相关标识归各自权利人所有。本项目�
 
 ## 开源依赖
 
-项目依赖 React、Next.js、Three.js、React Three Fiber、Phosphor Icons、Cloudflare 工具链等开源软件。各依赖继续适用其自身许可证，完整版本列表见 `package-lock.json`。
+项目依赖 React、Next.js、Three.js、React Three Fiber、Phosphor Icons、pinyin-pro、Cloudflare 工具链等开源软件。各依赖继续适用其自身许可证，完整版本列表见 `package-lock.json`。
