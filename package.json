@@ -2,6 +2,12 @@
   "name": "zuonaar-cinema-simulator",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xisanpi/zuonaar-cinema-simulator.git"
+  },
+  "homepage": "https://zuonaar-cinema-simulator.famous-ridge-2980.chatgpt.site/",
   "engines": {
     "node": ">=22.13.0"
   },

@@ -1,7 +1,15 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import {
+  ArrowRight,
+  Buildings,
+  MagnifyingGlass,
+  Monitor,
+  NavigationArrow,
+  Play,
+  SortDescending,
+} from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import {
   cinemaListings,
@@ -22,34 +30,7 @@ type UserLocation = {
 const defaultCity =
   citySummaries.find((city) => city.name === "北京") ?? citySummaries[0];
 const cityStorageKey = "zuonaar-selected-city";
-
-function DbxIcon({
-  name,
-  size = 18,
-}: {
-  name:
-    | "arrow-down"
-    | "arrow-right"
-    | "building"
-    | "location"
-    | "screen"
-    | "search"
-    | "sort"
-    | "video";
-  size?: number;
-}) {
-  return (
-    <Image
-      className="dbx-icon"
-      src={`/dbx-icons/${name}.svg`}
-      alt=""
-      width={size}
-      height={size}
-      aria-hidden="true"
-      unoptimized
-    />
-  );
-}
+const listScrollStorageKey = "zuonaar-cinema-list-scroll-y";
 
 function formatArea(value: number | null) {
   if (!value) return "尺寸待补";
@@ -102,6 +83,16 @@ function CinemaRow({
           <div>
             <div className="cinema-name-line">
               <h2>{cinema.name}</h2>
+              {cinema.formats.map((format) => (
+                <span
+                  className={`format-tag ${
+                    format === "Dolby Cinema" ? "format-tag-dolby" : ""
+                  }`}
+                  key={format}
+                >
+                  {formatLabel(format)}
+                </span>
+              ))}
               {cinema.priorityRank !== null ? (
                 <span className="status-tag status-tag-priority">
                   首批重点 #{cinema.priorityRank}
@@ -115,27 +106,17 @@ function CinemaRow({
           </div>
           {distance !== null ? (
             <div className="distance-label">
-              <DbxIcon name="location" size={16} />
+              <NavigationArrow size={16} aria-hidden="true" />
               <span>{formatDistance(distance)}</span>
             </div>
           ) : null}
         </div>
 
-        <div className="format-line" aria-label="影厅制式">
-          {cinema.formats.map((format) => (
-            <span
-              className={`format-tag ${
-                format === "Dolby Cinema" ? "format-tag-dolby" : ""
-              }`}
-              key={format}
-            >
-              {formatLabel(format)}
-            </span>
-          ))}
-          {cinema.halls.length > 1 ? (
+        {cinema.halls.length > 1 ? (
+          <div className="cinema-hall-meta">
             <span className="hall-count">{cinema.halls.length} 个高规格影厅</span>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
 
         <dl className="cinema-specs">
           <div>
@@ -164,20 +145,12 @@ function CinemaRow({
       <div className="cinema-result-action">
         <div>
           <div className="screen-index" aria-label="银幕面积">
-            <DbxIcon name="screen" size={19} />
+            <Monitor size={19} aria-hidden="true" />
             <span>
               <small>银幕面积</small>
               <strong>{formatArea(cinema.largestScreenArea)}</strong>
             </span>
           </div>
-          <a
-            className="source-link"
-            href={hall.sourceUrl}
-            target="_blank"
-            rel="noreferrer"
-          >
-            查看公开资料
-          </a>
         </div>
         <Link
           className={`primary-link ${isEntering ? "is-loading" : ""}`}
@@ -187,7 +160,14 @@ function CinemaRow({
           data-navigation-state={isEntering ? "loading" : "idle"}
           data-dbd-component="button"
           onClick={(event) => {
-            if (isEntering) event.preventDefault();
+            if (isEntering) {
+              event.preventDefault();
+              return;
+            }
+            window.sessionStorage.setItem(
+              listScrollStorageKey,
+              String(window.scrollY),
+            );
           }}
           onNavigate={() => setIsEntering(true)}
         >
@@ -199,7 +179,7 @@ function CinemaRow({
           ) : (
             <>
               <span>进入影厅</span>
-              <DbxIcon name="arrow-right" size={18} />
+              <ArrowRight size={18} aria-hidden="true" />
             </>
           )}
         </Link>
@@ -242,6 +222,23 @@ export function CinemaFinder() {
     if (!preferencesReady) return;
     window.localStorage.setItem(cityStorageKey, city.name);
   }, [city.name, preferencesReady]);
+
+  useEffect(() => {
+    if (!preferencesReady) return;
+    const savedScrollY = window.sessionStorage.getItem(listScrollStorageKey);
+    if (savedScrollY === null) return;
+    const scrollY = Number(savedScrollY);
+    if (!Number.isFinite(scrollY)) {
+      window.sessionStorage.removeItem(listScrollStorageKey);
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: scrollY, behavior: "auto" });
+      window.sessionStorage.removeItem(listScrollStorageKey);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [preferencesReady]);
 
   const results = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("zh-CN");
@@ -313,7 +310,7 @@ export function CinemaFinder() {
       <header className="finder-topbar" data-dbd-zone="pc-chat-header">
         <Link className="brand" href="/" aria-label="坐哪儿首页">
           <span className="brand-mark">
-            <DbxIcon name="video" size={22} />
+            <Play size={22} weight="fill" aria-hidden="true" />
           </span>
           <span>
             <strong>坐哪儿</strong>
@@ -329,7 +326,7 @@ export function CinemaFinder() {
           aria-live="polite"
           data-dbd-component="button"
         >
-          <DbxIcon name="location" size={18} />
+          <NavigationArrow size={18} aria-hidden="true" />
           <strong>
             {locationStatus === "loading"
               ? "定位中…"
@@ -355,7 +352,7 @@ export function CinemaFinder() {
       <section className="finder-workspace">
         <div className="filter-bar" data-dbd-pattern="cinema-filter-bar">
           <label className="city-picker">
-            <DbxIcon name="building" size={18} />
+            <Buildings size={18} aria-hidden="true" />
             <select
               aria-label="城市"
               value={city.name}
@@ -394,7 +391,7 @@ export function CinemaFinder() {
           </div>
 
           <label className="sort-field">
-            <DbxIcon name="sort" size={18} />
+            <SortDescending size={18} aria-hidden="true" />
             <select
               value={sortMode}
               onChange={(event) => setSortMode(event.target.value as SortMode)}
@@ -408,7 +405,7 @@ export function CinemaFinder() {
           </label>
 
           <label className="search-field" data-dbd-component="input">
-            <DbxIcon name="search" size={18} />
+            <MagnifyingGlass size={18} aria-hidden="true" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -416,17 +413,6 @@ export function CinemaFinder() {
               aria-label="搜索影院或商圈"
             />
           </label>
-        </div>
-
-        <div className="results-heading">
-          <div>
-            <strong>{city.name}影院</strong>
-            <span>{results.length} 个结果</span>
-          </div>
-          <span>
-            {userLocation ? "距离为直线距离 · " : ""}
-            数据库共收录 {cinemaListings.length} 家影院
-          </span>
         </div>
 
         <div className="cinema-results">
@@ -440,7 +426,7 @@ export function CinemaFinder() {
             ))
           ) : (
             <div className="empty-results" role="status">
-              <DbxIcon name="search" size={28} />
+              <MagnifyingGlass size={28} aria-hidden="true" />
               <strong>没有符合条件的影院</strong>
               <span>试试清空搜索，或切换其他放映制式。</span>
               <button

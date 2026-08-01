@@ -1450,7 +1450,7 @@ export function CinemaScene(props: CinemaSceneProps) {
         {onlineVideoActive && (
           <iframe
             src={countdownPreviewEmbed}
-            title="IMAX Laser Countdown 在线预览"
+            title="IMAX Laser Countdown"
             allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
             referrerPolicy="strict-origin-when-cross-origin"
           />

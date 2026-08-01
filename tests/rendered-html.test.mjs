@@ -35,6 +35,9 @@ test("server-renders the cinema discovery page", async () => {
   assert.match(html, /杜比影院/);
   assert.match(html, /精选巨幕/);
   assert.match(html, /进入影厅/);
+  assert.doesNotMatch(html, /查看公开资料/);
+  assert.doesNotMatch(html, /数据库共收录/);
+  assert.doesNotMatch(html, /个结果/);
   assert.match(html, /aria-busy="false"/);
   assert.match(html, /data-navigation-state="idle"/);
   assert.match(html, /href="\/cinema\/hall-0018"/);
@@ -65,7 +68,8 @@ test("server-renders a selected auditorium simulator", async () => {
   assert.match(html, /影院视野模拟器/);
   assert.match(html, /中国电影博物馆/);
   assert.match(html, /幕面光学模型/);
-  assert.match(html, /IMAX Laser Countdown（在线）/);
+  assert.match(html, /IMAX Laser Countdown/);
+  assert.doesNotMatch(html, /IMAX Laser Countdown（在线）/);
   assert.match(html, /真实座位排列/);
   assert.match(html, /role="tab"[^>]*>选座</);
   assert.match(html, /role="tab"[^>]*>影院信息</);

@@ -1,52 +1,70 @@
 # 坐哪儿
 
-一个面向普通观众的影院发现与 3D 视野模拟器。用户先按城市、IMAX / 杜比制式、银幕面积和距离选择影院，再从具体座位的人眼视角体验银幕大小、视线角度与放映氛围。
+按城市浏览 IMAX、杜比影院与精选巨幕，并从真实座位排列或容量估算的座位视角体验银幕大小、视线角度和放映氛围。
 
-当前版本接入公开可追溯的 IMAX / 杜比影院清单、银幕规格、坐标和登记容量。已抓取影厅优先使用真实选座网格的逐排座号与空槽；未抓取影厅继续按容量近似。座间距、排距、高差与 3D 建筑结构仍是几何估算，不代表影院官方测绘。
+- 在线体验：https://zuonaar-cinema-simulator.famous-ridge-2980.chatgpt.site/
+- 产品范围：[PRD.md](./PRD.md)
+- 第三方内容与数据说明：[THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)
 
-完整产品范围见 [PRD.md](./PRD.md)。
+> 本项目是独立的非官方观影体验模拟器，与 IMAX Corporation、Dolby Laboratories 或相关影院品牌不存在隶属、赞助或认可关系。IMAX、Dolby 等名称及标识归各自权利人所有。
 
-## Prerequisites
+## 功能
 
-- Node.js `>=22.13.0`
+- 按城市、制式和银幕面积筛选影院
+- 优先进入同一影院的 IMAX 影厅
+- 使用真实选座网格或容量估算生成座位排列
+- 从指定座位的人眼视角渲染 3D 影厅、银幕和座椅
+- 切换灯光与短片播放状态
+- 适配桌面端与移动端
 
-## 快速开始
+座间距、排距、高差、厅深和建筑结构仍可能是几何估算，并非影院官方测绘数据。
+
+## 本地开发
+
+需要 Node.js `>=22.13.0`。
 
 ```bash
 npm install
 npm run dev
-npm run build
 ```
-
-This starter does not use `wrangler.jsonc`.
 
 打开 `http://localhost:3000`。
 
-也可以在 Codex 环境信息中点击「启动项目服务」。
+## 验证
+
+```bash
+npm run lint
+npm test
+```
+
+`npm test` 会执行生产构建和服务端页面渲染测试。
 
 ## 项目结构
 
-- `app/`：影院发现页、影院数据、影厅路由、3D 场景与交互
-- `public/`：本地短视频、分享图与设计系统图标
-- `PRD.md`：产品范围、数据模型与验收标准
-- `.codex/environments/`：Codex 一键启动配置
-- `scripts/`：本地启动脚本
+- `app/`：影院发现页、数据模型、影厅路由和 Three.js 场景
+- `public/`：本地演示媒体与分享图
+- `scripts/`：影院清单和座位排列的数据生成脚本
+- `tests/`：构建后的页面渲染测试
+- `worker/`：Cloudflare Worker 入口
 
-## 验证命令
+## 数据更新
 
-- `npm run dev`：本地开发
-- `npm run build`：生产构建
-- `npm run lint`：静态检查
-- `npm test`：构建和渲染测试
+应用清单由 `scripts/build_app_cinema_inventory.py` 生成。已抓取的座位网格由 `scripts/build_app_seat_layouts.mjs` 生成到 `app/seat-layouts.json`。
 
-## 影院数据扩展
+选座网格仅表示逐排座号、槽位和过道，不包含实时可售、已售或锁座状态。提交新数据前请记录来源、抓取时间和再分发依据。
 
-应用清单由 `scripts/build_app_cinema_inventory.py` 从研究数据生成，并补充影院坐标。新增影厅时至少需要：影院名称、城市、地址、坐标、制式、放映技术、银幕宽高、比例与登记座位数。若要从容量近似升级为实测模拟，还需要银幕底边高度、厅深、每排座位数量、排距、排间高差、过道位置和不可售座位。
+## 部署
 
-已抓取的稳定座位网格由 `scripts/build_app_seat_layouts.mjs` 从研究数据生成到 `app/seat-layouts.json`。运行：
+当前生产构建使用 Vinext 和 Cloudflare Worker 兼容输出：
 
 ```bash
-node scripts/build_app_seat_layouts.mjs
+npm run build
 ```
 
-选座网格只表示逐排座号和网页槽位，不包含实时可售、已售或锁座状态。
+站点托管配置位于 `.openai/hosting.json`。它不包含访问令牌，但绑定当前 Sites 项目；复刻部署时应使用自己的托管项目配置。
+
+## 许可
+
+源代码使用 [MIT License](./LICENSE)。影院数据、座位排列、商标、第三方影片与其他外部内容不自动包含在 MIT 授权中，详见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)。
+
+欢迎阅读 [CONTRIBUTING.md](./CONTRIBUTING.md) 后参与贡献。

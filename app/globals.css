@@ -1048,9 +1048,9 @@ a:focus-visible {
 
   .mobile-sheet-header {
     height: 64px;
-    padding: 14px 12px 4px;
+    padding: 10px 12px;
     display: grid;
-    grid-template-columns: 36px minmax(0, 1fr) 36px;
+    grid-template-columns: minmax(0, 1fr) 36px;
     align-items: center;
     position: relative;
     border-bottom: 1px solid transparent;
@@ -1060,33 +1060,19 @@ a:focus-visible {
     border-bottom-color: var(--line);
   }
 
-  .mobile-sheet-handle {
-    width: 36px;
-    height: 4px;
-    position: absolute;
-    top: 6px;
-    left: 50%;
-    border-radius: var(--radius-round);
-    background: var(--line-strong);
-    transform: translateX(-50%);
-  }
-
   .mobile-sheet-tabs {
     min-width: 0;
-    padding: 2px;
-    grid-column: 2;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2px;
-    border-radius: var(--radius-control);
-    background: var(--surface-soft);
+    grid-column: 1;
+    display: flex;
+    justify-content: flex-start;
+    gap: 6px;
   }
 
   .mobile-sheet-tabs button {
     min-height: 44px;
-    padding: 0 14px;
-    border: 0;
-    border-radius: 8px;
+    padding: 0 16px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-round);
     background: transparent;
     color: var(--muted);
     font-size: 12px;
@@ -1098,14 +1084,14 @@ a:focus-visible {
   .mobile-sheet-tabs button.is-selected {
     background: var(--surface);
     color: var(--text);
-    box-shadow: inset 0 0 0 1px var(--line);
+    border-color: var(--line-strong);
   }
 
   .mobile-sheet-toggle {
     width: 36px;
     height: 44px;
     padding: 0;
-    grid-column: 3;
+    grid-column: 2;
     display: grid;
     place-items: center;
     justify-self: end;
@@ -1189,13 +1175,6 @@ a:focus-visible {
   background: var(--finder-background);
 }
 
-.dbx-icon {
-  flex: 0 0 auto;
-  display: block;
-  filter: invert(1);
-  opacity: 0.86;
-}
-
 .finder-topbar {
   min-height: 68px;
   padding: 10px max(20px, calc((100vw - 1180px) / 2));
@@ -1246,11 +1225,11 @@ a:focus-visible {
 .finder-intro {
   width: min(1180px, calc(100% - 40px));
   margin: 0 auto;
-  padding: 64px 0 48px;
+  padding: 40px 0 32px;
 }
 
 .intro-copy {
-  max-width: 700px;
+  max-width: none;
 }
 
 .eyebrow {
@@ -1272,11 +1251,12 @@ a:focus-visible {
 }
 
 .intro-copy p {
-  max-width: 620px;
-  margin: 20px 0 0;
+  max-width: none;
+  margin: 16px 0 0;
   color: var(--muted);
   font-size: 15px;
   line-height: 1.75;
+  white-space: nowrap;
 }
 
 .city-picker {
@@ -1399,30 +1379,8 @@ a:focus-visible {
   font-size: 12px;
 }
 
-.results-heading {
-  padding: 28px 2px 12px;
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 20px;
-}
-
-.results-heading > div {
-  display: flex;
-  align-items: baseline;
-  gap: 9px;
-}
-
-.results-heading strong {
-  font-size: 17px;
-}
-
-.results-heading span {
-  color: var(--subtle);
-  font-size: 11px;
-}
-
 .cinema-results {
+  margin-top: 16px;
   display: grid;
   gap: 10px;
 }
@@ -1467,6 +1425,7 @@ a:focus-visible {
   min-width: 0;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -1516,12 +1475,8 @@ a:focus-visible {
   font-size: 12px;
 }
 
-.format-line {
-  margin-top: 14px;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
+.cinema-hall-meta {
+  margin-top: 10px;
 }
 
 .format-tag {
@@ -1604,20 +1559,6 @@ a:focus-visible {
 .screen-index strong {
   font-size: 16px;
   font-weight: 540;
-}
-
-.source-link {
-  margin: 7px 0 0 28px;
-  display: inline-block;
-  color: var(--subtle);
-  font-size: 9px;
-  text-decoration: none;
-}
-
-.source-link:hover {
-  color: var(--muted);
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 
 .primary-link {
@@ -1708,7 +1649,11 @@ a:focus-visible {
   }
 
   .finder-intro {
-    padding-top: 44px;
+    padding-top: 32px;
+  }
+
+  .intro-copy p {
+    white-space: normal;
   }
 
   .filter-bar {
@@ -1853,19 +1798,6 @@ a:focus-visible {
     padding: 0 11px;
     flex: 0 0 auto;
     border-radius: var(--radius-control);
-  }
-
-  .results-heading {
-    padding: 22px 2px 10px;
-    align-items: center;
-  }
-
-  .results-heading > span {
-    display: none;
-  }
-
-  .results-heading strong {
-    font-size: 16px;
   }
 
   .cinema-result {

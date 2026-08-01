@@ -16,6 +16,7 @@ import {
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
 } from "react";
@@ -95,6 +96,7 @@ export function CinemaExperience({
   const [mobilePanelTab, setMobilePanelTab] =
     useState<MobilePanelTab>("seats");
   const [isMobile, setIsMobile] = useState(false);
+  const seatMapRef = useRef<HTMLDivElement>(null);
 
   const auditorium =
     auditoriums.find((item) => item.id === auditoriumId) ?? auditoriums[0];
@@ -122,6 +124,18 @@ export function CinemaExperience({
     mediaQuery.addEventListener("change", update);
     return () => mediaQuery.removeEventListener("change", update);
   }, []);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const seatMap = seatMapRef.current;
+      if (!seatMap) return;
+      seatMap.scrollLeft = Math.max(
+        0,
+        (seatMap.scrollWidth - seatMap.clientWidth) / 2,
+      );
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [auditorium.id, isMobilePanelOpen, mobilePanelTab]);
 
   const switchAuditorium = (nextAuditoriumId: string) => {
     setAuditoriumId(nextAuditoriumId);
@@ -213,9 +227,7 @@ export function CinemaExperience({
                 }}
               >
                 <option value="local-demo">自然演示片</option>
-                <option value="imax-countdown">
-                  IMAX Laser Countdown（在线）
-                </option>
+                <option value="imax-countdown">IMAX Laser Countdown</option>
               </select>
               {filmSource === "imax-countdown" && (
                 <a
@@ -273,7 +285,6 @@ export function CinemaExperience({
           data-dbd-pattern="panel-sheet"
         >
           <div className="mobile-sheet-header">
-            <span className="mobile-sheet-handle" aria-hidden="true" />
             <div className="mobile-sheet-tabs" role="tablist" aria-label="影厅面板">
               <button
                 type="button"
@@ -427,6 +438,7 @@ export function CinemaExperience({
             </div>
 
             <div
+              ref={seatMapRef}
               className={[
                 "seat-map",
                 auditorium.rowCount >= 19
