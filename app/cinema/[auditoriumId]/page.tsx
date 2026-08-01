@@ -1,6 +1,14 @@
 import { notFound } from "next/navigation";
 import { CinemaExperience } from "../../CinemaExperience";
-import { getAuditoriumById } from "../../cinema-data";
+import { auditoriums, getAuditoriumById } from "../../cinema-data";
+
+export const dynamicParams = false;
+
+export function generateStaticParams() {
+  return auditoriums.map((auditorium) => ({
+    auditoriumId: auditorium.id,
+  }));
+}
 
 export default async function CinemaPage({
   params,

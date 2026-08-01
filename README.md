@@ -2,7 +2,7 @@
 
 按城市浏览 IMAX、杜比影院与精选巨幕，并从真实座位排列或容量估算的座位视角体验银幕大小、视线角度和放映氛围。
 
-- 在线体验：https://zuonaar-cinema-simulator.famous-ridge-2980.chatgpt.site/
+- 在线体验：https://xisanpi.github.io/zuonaar-cinema-simulator/
 - 产品范围：[PRD.md](./PRD.md)
 - 第三方内容与数据说明：[THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)
 
@@ -55,7 +55,15 @@ npm test
 
 ## 部署
 
-当前生产构建使用 Vinext 和 Cloudflare Worker 兼容输出：
+公开站点使用 Next.js 静态导出，并由 GitHub Actions 自动发布到 GitHub Pages：
+
+```bash
+npm run build:pages
+```
+
+静态文件生成到 `out/`。推送到 `main` 后，`.github/workflows/deploy-pages.yml` 会自动完成构建与发布。
+
+Cloudflare Worker 兼容构建仍可用于本地验证和备用托管：
 
 ```bash
 npm run build

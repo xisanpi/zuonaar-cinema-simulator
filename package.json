@@ -7,13 +7,14 @@
     "type": "git",
     "url": "https://github.com/xisanpi/zuonaar-cinema-simulator.git"
   },
-  "homepage": "https://zuonaar-cinema-simulator.famous-ridge-2980.chatgpt.site/",
+  "homepage": "https://xisanpi.github.io/zuonaar-cinema-simulator/",
   "engines": {
     "node": ">=22.13.0"
   },
   "scripts": {
     "dev": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext dev",
     "build": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext build",
+    "build:pages": "GITHUB_PAGES=true NEXT_PUBLIC_BASE_PATH=/zuonaar-cinema-simulator NEXT_PUBLIC_SITE_URL=https://xisanpi.github.io/zuonaar-cinema-simulator/ next build --webpack",
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
     "test": "npm run build && node --test tests/rendered-html.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",

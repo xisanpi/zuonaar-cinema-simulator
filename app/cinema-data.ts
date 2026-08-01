@@ -39,7 +39,7 @@ type CapturedSeatLayout = {
   }>;
 };
 
-const capturedSeatLayouts = seatLayoutsJson.layouts as Record<
+const capturedSeatLayouts = seatLayoutsJson.layouts as unknown as Record<
   string,
   CapturedSeatLayout
 >;

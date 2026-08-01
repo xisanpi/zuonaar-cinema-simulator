@@ -557,7 +557,7 @@ function VideoSurface({
 }: Pick<CinemaSceneProps, "auditorium" | "playing"> & { active: boolean }) {
   const texture = useMemo(() => {
     const video = document.createElement("video");
-    video.src = "/cinema-demo.mp4";
+    video.src = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/cinema-demo.mp4`;
     video.crossOrigin = "anonymous";
     video.loop = true;
     video.muted = true;
