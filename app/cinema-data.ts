@@ -5,6 +5,10 @@ import {
   type InventoryHall,
 } from "./cinema-inventory";
 import seatLayoutsJson from "./seat-layouts.json";
+import {
+  getScreenDataAudit,
+  type ScreenDataAudit,
+} from "./screen-data-audit";
 
 export type SeatStatus = "available" | "occupied";
 
@@ -53,6 +57,7 @@ export type Auditorium = {
   screenBottom: number;
   screenZ: number;
   screenAspect: string;
+  screenDataAudit: ScreenDataAudit | null;
   projectionTechnology: string;
   projectionDetails: string[];
   screenSurface: {
@@ -195,6 +200,7 @@ function hallToAuditorium(hall: InventoryHall): Auditorium {
     screenBottom: 1.5,
     screenZ: estimatedFirstRowZ - estimatedFrontDistance,
     screenAspect: hall.ratio || "比例待补",
+    screenDataAudit: getScreenDataAudit(hall),
     projectionTechnology: hall.projection || hall.brand,
     projectionDetails: projectionDetails(hall),
     screenSurface: {

@@ -396,7 +396,18 @@ export function CinemaExperience({
               data-dbd-pattern="technical-summary"
             >
               <div>
-                <span>银幕数据</span>
+                <span className="technical-label-stack">
+                  <span>银幕数据</span>
+                  {auditorium.screenDataAudit ? (
+                    <span
+                      className={`screen-data-confidence is-${auditorium.screenDataAudit.status}`}
+                      title={auditorium.screenDataAudit.note}
+                      aria-label={`银幕数据可信度：${auditorium.screenDataAudit.label}。${auditorium.screenDataAudit.note}`}
+                    >
+                      {auditorium.screenDataAudit.label}
+                    </span>
+                  ) : null}
+                </span>
                 <strong>
                   {auditorium.screenWidth.toFixed(1)} ×{" "}
                   {auditorium.screenHeight.toFixed(1)} m
