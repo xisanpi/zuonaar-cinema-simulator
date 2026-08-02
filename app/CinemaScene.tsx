@@ -428,6 +428,11 @@ function CameraRig({
     const canvas = gl.domElement;
 
     const onPointerDown = (event: PointerEvent) => {
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      desiredQuaternion.current.copy(camera.quaternion);
+      desiredEuler.current.setFromQuaternion(camera.quaternion, "YXZ");
       dragging.current = true;
       lastPointer.current = { x: event.clientX, y: event.clientY };
       canvas.setPointerCapture?.(event.pointerId);
@@ -436,29 +441,41 @@ function CameraRig({
 
     const onPointerMove = (event: PointerEvent) => {
       if (!dragging.current) return;
+      event.preventDefault();
+      event.stopPropagation();
       const deltaX = event.clientX - lastPointer.current.x;
       const deltaY = event.clientY - lastPointer.current.y;
       lastPointer.current = { x: event.clientX, y: event.clientY };
 
-      desiredEuler.current.y -= deltaX * 0.004;
+      desiredEuler.current.y += deltaX * 0.004;
       desiredEuler.current.x = Math.max(
         -1.25,
-        Math.min(1.25, desiredEuler.current.x - deltaY * 0.004),
+        Math.min(1.25, desiredEuler.current.x + deltaY * 0.004),
       );
       desiredQuaternion.current.setFromEuler(desiredEuler.current);
     };
 
     const onPointerUp = (event: PointerEvent) => {
+      if (dragging.current) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
       dragging.current = false;
       canvas.releasePointerCapture?.(event.pointerId);
       canvas.style.cursor = "grab";
     };
 
+    const onLostPointerCapture = () => {
+      dragging.current = false;
+      canvas.style.cursor = "grab";
+    };
+
     canvas.style.cursor = "grab";
-    canvas.addEventListener("pointerdown", onPointerDown);
-    canvas.addEventListener("pointermove", onPointerMove);
-    canvas.addEventListener("pointerup", onPointerUp);
-    canvas.addEventListener("pointercancel", onPointerUp);
+    canvas.addEventListener("pointerdown", onPointerDown, { passive: false });
+    canvas.addEventListener("pointermove", onPointerMove, { passive: false });
+    canvas.addEventListener("pointerup", onPointerUp, { passive: false });
+    canvas.addEventListener("pointercancel", onPointerUp, { passive: false });
+    canvas.addEventListener("lostpointercapture", onLostPointerCapture);
 
     return () => {
       canvas.style.cursor = "";
@@ -466,12 +483,20 @@ function CameraRig({
       canvas.removeEventListener("pointermove", onPointerMove);
       canvas.removeEventListener("pointerup", onPointerUp);
       canvas.removeEventListener("pointercancel", onPointerUp);
+      canvas.removeEventListener("lostpointercapture", onLostPointerCapture);
     };
-  }, [gl]);
+  }, [camera, gl]);
 
-  useFrame(() => {
-    camera.position.lerp(desiredPosition.current, 0.085);
-    camera.quaternion.slerp(desiredQuaternion.current, 0.085);
+  useFrame((_, delta) => {
+    const transitionFactor = 1 - Math.exp(-5.3 * delta);
+    camera.position.lerp(desiredPosition.current, transitionFactor);
+
+    if (dragging.current) {
+      camera.quaternion.copy(desiredQuaternion.current);
+      return;
+    }
+
+    camera.quaternion.slerp(desiredQuaternion.current, transitionFactor);
   });
 
   return null;

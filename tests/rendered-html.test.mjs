@@ -47,11 +47,18 @@ test("server-renders the cinema discovery page", async () => {
   assert.match(html, /href="\/cinema\/hall-0018"/);
   assert.doesNotMatch(html, /href="\/cinema\/hall-0003"/);
   assert.match(html, /中国电影博物馆/);
-  assert.match(html, /定位距离/);
+  assert.match(html, />定位<\/strong>/);
+  assert.doesNotMatch(html, /定位距离/);
+  assert.doesNotMatch(html, /class="finder-topbar"/);
+  assert.match(html, /aria-label="放映制式筛选"/);
+  assert.match(html, /<option value="all" selected="">全部影院<\/option>/);
   assert.doesNotMatch(html, />制式</);
   assert.doesNotMatch(html, />排序</);
   assert.ok(
-    html.indexOf('aria-label="城市"') <
+    html.indexOf(">定位</strong>") < html.indexOf('aria-label="城市"') &&
+      html.indexOf('aria-label="城市"') <
+        html.indexOf('aria-label="放映制式筛选"') &&
+      html.indexOf('aria-label="放映制式筛选"') <
       html.indexOf('aria-label="搜索城市、影院或商圈"'),
   );
   assert.match(html, /搜索城市、影院或商圈（支持拼音）/);
@@ -63,7 +70,8 @@ test("server-renders the cinema discovery page", async () => {
     html,
     /<option value="screen" selected="">银幕从大到小<\/option>/,
   );
-  assert.match(html, /先看视野，再决定坐哪儿。/);
+  assert.match(html, /找到更适合你的电影院。/);
+  assert.doesNotMatch(html, /先看视野，再决定坐哪儿。/);
   assert.doesNotMatch(html, /在坐下之前，先看清这块银幕。/);
   assert.doesNotMatch(html, /codex-preview/);
   assert.doesNotMatch(html, /Your site is taking shape/);
@@ -90,13 +98,23 @@ test("server-renders a selected auditorium simulator", async () => {
   assert.match(html, /中国电影博物馆/);
   assert.match(html, /幕面光学模型/);
   assert.match(html, /IMAX Countdown/);
+  assert.match(html, /aria-label="播放影片：IMAX Countdown"/);
+  assert.match(html, /data-dbd-pattern="film-player"/);
+  assert.doesNotMatch(html, /data-dbd-pattern="film-picker"/);
+  assert.doesNotMatch(html, /class="play-control"/);
   assert.doesNotMatch(html, /IMAX Laser Countdown（在线）/);
   assert.doesNotMatch(html, /IMAX 官方原片/);
   assert.match(html, /真实座位排列/);
+  assert.match(
+    html,
+    /class="scene-seat-status"[^>]*aria-controls="mobile-seat-panel"/,
+  );
   assert.match(html, /role="tab"[^>]*>选座</);
   assert.match(html, /role="tab"[^>]*>影院信息</);
   assert.doesNotMatch(html, /显示观众|隐藏观众|>坐人</);
-  assert.match(html, />关灯</);
+  assert.match(html, /aria-label="关灯"/);
+  assert.match(html, /class="scene-light-toggle/);
+  assert.doesNotMatch(html, /class="projection-toggle/);
   assert.doesNotMatch(html, /散场灯光|放映中/);
   assert.doesNotMatch(html, /逐排座号、空槽与过道来自实际选座页面/);
   assert.doesNotMatch(html, /返回坐哪儿影院列表/);

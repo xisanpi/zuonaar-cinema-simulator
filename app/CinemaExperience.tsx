@@ -8,10 +8,9 @@ import {
   CaretLeft,
   CaretRight,
   CaretUp,
-  Moon,
+  Lightbulb,
   Pause,
   Play,
-  SunDim,
 } from "@phosphor-icons/react";
 import {
   useEffect,
@@ -152,6 +151,13 @@ export function CinemaExperience({
     if (nextFilmMode) setPlaybackToken((current) => current + 1);
   };
 
+  const togglePlayback = () => {
+    const nextPlaying = !playing;
+    if (!filmMode) setFilmMode(true);
+    setPlaying(nextPlaying);
+    if (nextPlaying) setPlaybackToken((current) => current + 1);
+  };
+
   const showMobilePanelTab = (tab: MobilePanelTab) => {
     setMobilePanelTab(tab);
     setIsMobilePanelOpen(true);
@@ -171,21 +177,6 @@ export function CinemaExperience({
           </strong>
         </Link>
 
-        <div className="topbar-actions" aria-label="影厅显示设置">
-          <button
-            className={`projection-toggle ${filmMode ? "is-active" : ""}`}
-            type="button"
-            data-dbd-component="button"
-            data-dbd-variant="plain"
-            onClick={toggleFilmMode}
-            aria-pressed={filmMode}
-            aria-label={lightActionLabel}
-            title={lightActionLabel}
-          >
-            {filmMode ? <SunDim size={19} /> : <Moon size={19} />}
-            <span>{lightActionLabel}</span>
-          </button>
-        </div>
       </header>
 
       <section
@@ -206,51 +197,75 @@ export function CinemaExperience({
             isMobile={isMobile}
           />
 
-          <div className="scene-seat-status" aria-live="polite">
+          <button
+            className="scene-seat-status"
+            type="button"
+            onClick={() => showMobilePanelTab("seats")}
+            aria-live="polite"
+            aria-label={`打开座位图，当前为 ${selectedSeat.rowLabel} 排 ${selectedSeat.number} 座`}
+            aria-controls="mobile-seat-panel"
+            aria-expanded={
+              isMobile
+                ? isMobilePanelOpen && mobilePanelTab === "seats"
+                : undefined
+            }
+            tabIndex={isMobile ? 0 : -1}
+          >
             {selectedSeat.rowLabel} 排 {selectedSeat.number} 座
-          </div>
+          </button>
 
           <div className="scene-controls">
-            <div className="film-picker" data-dbd-pattern="film-picker">
-              <span className="film-picker-label">影片</span>
-              <strong>IMAX Countdown</strong>
-            </div>
+            <button
+              className="film-picker film-play-control"
+              type="button"
+              data-dbd-component="button"
+              data-dbd-variant="secondary"
+              data-dbd-pattern="film-player"
+              onClick={togglePlayback}
+              aria-pressed={playing}
+              aria-label={`${playing ? "暂停影片" : "播放影片"}：IMAX Countdown`}
+              title={`${playing ? "暂停影片" : "播放影片"}：IMAX Countdown`}
+            >
+              {playing ? (
+                <Pause size={18} weight="fill" />
+              ) : (
+                <Play size={18} weight="fill" />
+              )}
+              <strong>
+                {playing ? "暂停影片" : "播放影片"}：IMAX Countdown
+              </strong>
+            </button>
 
             <button
-              className="play-control"
+              className={`scene-light-toggle ${filmMode ? "is-dark" : ""}`}
               type="button"
               data-dbd-component="button"
               data-dbd-variant="icon-only"
-              onClick={() => {
-                const nextPlaying = !playing;
-                if (!filmMode) setFilmMode(true);
-                setPlaying(nextPlaying);
-                if (nextPlaying) {
-                  setPlaybackToken((current) => current + 1);
-                }
-              }}
-              aria-pressed={playing}
-              aria-label={
-                playing
-                  ? "暂停影片"
-                  : "播放短片"
-              }
-              title={
-                playing
-                  ? "暂停影片"
-                  : "播放短片"
-              }
+              onClick={toggleFilmMode}
+              aria-pressed={filmMode}
+              aria-label={lightActionLabel}
+              title={lightActionLabel}
             >
-              {playing ? (
-                <Pause size={20} weight="fill" />
-              ) : (
-                <Play size={20} weight="fill" />
-              )}
+              <Lightbulb
+                size={20}
+                weight={filmMode ? "regular" : "fill"}
+                aria-hidden="true"
+              />
             </button>
           </div>
 
           <p className="gesture-hint">拖动观察银幕，视点固定在当前座位</p>
         </div>
+
+        {isMobilePanelOpen ? (
+          <button
+            className="mobile-sheet-dismiss-layer"
+            type="button"
+            aria-label="收起影厅面板"
+            aria-controls="mobile-seat-panel"
+            onClick={() => setIsMobilePanelOpen(false)}
+          />
+        ) : null}
 
         <aside
           className={`seat-panel ${
@@ -260,7 +275,13 @@ export function CinemaExperience({
           data-dbd-zone="cinema-seat-panel"
           data-dbd-pattern="panel-sheet"
         >
-          <div className="mobile-sheet-header">
+          <div
+            className="mobile-sheet-header"
+            onClick={(event) => {
+              if ((event.target as HTMLElement).closest("button")) return;
+              setIsMobilePanelOpen((current) => !current);
+            }}
+          >
             <div className="mobile-sheet-tabs" role="tablist" aria-label="影厅面板">
               <button
                 type="button"

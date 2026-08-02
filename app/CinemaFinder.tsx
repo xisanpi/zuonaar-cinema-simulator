@@ -4,10 +4,10 @@ import Link from "next/link";
 import {
   ArrowRight,
   Buildings,
+  Funnel,
   MagnifyingGlass,
   Monitor,
   NavigationArrow,
-  Play,
   SortDescending,
 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
@@ -359,41 +359,9 @@ export function CinemaFinder() {
 
   return (
     <main className="finder-page">
-      <header className="finder-topbar" data-dbd-zone="pc-chat-header">
-        <Link className="brand" href="/" aria-label="坐哪儿首页">
-          <span className="brand-mark">
-            <Play size={22} weight="fill" aria-hidden="true" />
-          </span>
-          <span>
-            <strong>坐哪儿</strong>
-            <small>先选影院，再选座位</small>
-          </span>
-        </Link>
-
-        <button
-          className="location-trigger"
-          type="button"
-          onClick={useDeviceLocation}
-          disabled={locationStatus === "loading"}
-          aria-live="polite"
-          data-dbd-component="button"
-        >
-          <NavigationArrow size={18} aria-hidden="true" />
-          <strong>
-            {locationStatus === "loading"
-              ? "定位中…"
-              : locationStatus === "error"
-                ? "定位失败，重试"
-                : userLocation
-                  ? "已定位"
-                  : "定位距离"}
-          </strong>
-        </button>
-      </header>
-
       <section className="finder-intro" data-dbd-zone="cinema-discovery-header">
         <div className="intro-copy">
-          <h1>先看视野，再决定坐哪儿。</h1>
+          <h1>找到更适合你的电影院。</h1>
           <p>
             按城市查看已收录的 IMAX、杜比影院与精选巨幕，比较银幕与放映技术，再进入真实比例的 3D 影厅。
           </p>
@@ -402,6 +370,26 @@ export function CinemaFinder() {
 
       <section className="finder-workspace">
         <div className="filter-bar" data-dbd-pattern="cinema-filter-bar">
+          <button
+            className="location-trigger"
+            type="button"
+            onClick={useDeviceLocation}
+            disabled={locationStatus === "loading"}
+            aria-live="polite"
+            data-dbd-component="button"
+          >
+            <NavigationArrow size={18} aria-hidden="true" />
+            <strong>
+              {locationStatus === "loading"
+                ? "定位中…"
+                : locationStatus === "error"
+                  ? "定位失败，重试"
+                  : userLocation
+                    ? "已定位"
+                    : "定位"}
+            </strong>
+          </button>
+
           <label className="city-picker">
             <Buildings size={18} aria-hidden="true" />
             <select
@@ -417,29 +405,21 @@ export function CinemaFinder() {
             </select>
           </label>
 
-          <div className="format-filters" aria-label="放映制式筛选">
-            {(
-              [
-                ["all", "全部"],
-                ["IMAX", "IMAX"],
-                ["Dolby Cinema", "杜比影院"],
-                ["Other PLF", "精选巨幕"],
-              ] as const
-            ).map(([value, label]) => (
-              <button
-                className={`filter-chip ${
-                  formatFilter === value ? "is-selected" : ""
-                }`}
-                type="button"
-                key={value}
-                onClick={() => setFormatFilter(value)}
-                aria-pressed={formatFilter === value}
-                data-dbd-component="button"
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <label className="format-field">
+            <Funnel size={18} aria-hidden="true" />
+            <select
+              value={formatFilter}
+              onChange={(event) =>
+                setFormatFilter(event.target.value as FormatFilter)
+              }
+              aria-label="放映制式筛选"
+            >
+              <option value="all">全部影院</option>
+              <option value="IMAX">IMAX</option>
+              <option value="Dolby Cinema">杜比影院</option>
+              <option value="Other PLF">精选巨幕</option>
+            </select>
+          </label>
 
           <label className="sort-field">
             <SortDescending size={18} aria-hidden="true" />
