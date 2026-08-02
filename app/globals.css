@@ -1170,7 +1170,8 @@ a:focus-visible {
 }
 
 .location-trigger {
-  min-width: 116px;
+  width: 100%;
+  min-width: 0;
   min-height: 42px;
   padding: 0 11px;
   display: flex;
@@ -1225,7 +1226,8 @@ a:focus-visible {
 }
 
 .city-picker {
-  min-width: 152px;
+  width: 100%;
+  min-width: 0;
   min-height: 42px;
   padding: 0 11px;
   display: flex;
@@ -1239,6 +1241,8 @@ a:focus-visible {
 .city-picker select {
   width: 100%;
   min-width: 0;
+  padding: 0;
+  appearance: none;
   border: 0;
   outline: 0;
   background: transparent;
@@ -1256,7 +1260,12 @@ a:focus-visible {
 .filter-bar {
   padding: 12px;
   display: grid;
-  grid-template-columns: auto auto minmax(130px, auto) minmax(160px, auto) minmax(220px, 1fr);
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1.25fr)
+    minmax(0, 1.25fr)
+    minmax(0, 1.4fr)
+    minmax(0, 2fr);
   align-items: center;
   gap: 12px;
   border: 1px solid var(--line);
@@ -1378,6 +1387,8 @@ a:focus-visible {
 
 .format-field,
 .sort-field {
+  width: 100%;
+  min-width: 0;
   min-height: 42px;
   padding: 0 11px;
   display: flex;
@@ -1390,12 +1401,21 @@ a:focus-visible {
 
 .format-field select,
 .sort-field select {
-  min-width: 105px;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  appearance: none;
   border: 0;
   outline: 0;
   background: transparent;
   color: var(--text);
   font-size: 12px;
+}
+
+.select-caret {
+  flex: 0 0 auto;
+  color: var(--muted);
+  pointer-events: none;
 }
 
 .cinema-results {
@@ -1665,7 +1685,7 @@ a:focus-visible {
   cursor: pointer;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 820px) {
   .intro-copy h1 {
     font-size: clamp(22px, 3.3vw, 30px);
   }
@@ -1679,7 +1699,7 @@ a:focus-visible {
   }
 
   .filter-bar {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .location-trigger {

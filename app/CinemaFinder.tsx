@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   Buildings,
+  CaretDown,
   Funnel,
   MagnifyingGlass,
   Monitor,
@@ -403,6 +404,7 @@ export function CinemaFinder() {
                 </option>
               ))}
             </select>
+            <CaretDown className="select-caret" size={14} aria-hidden="true" />
           </label>
 
           <label className="format-field">
@@ -419,6 +421,7 @@ export function CinemaFinder() {
               <option value="Dolby Cinema">杜比影院</option>
               <option value="Other PLF">精选巨幕</option>
             </select>
+            <CaretDown className="select-caret" size={14} aria-hidden="true" />
           </label>
 
           <label className="sort-field">
@@ -433,6 +436,7 @@ export function CinemaFinder() {
                 距离从近到远
               </option>
             </select>
+            <CaretDown className="select-caret" size={14} aria-hidden="true" />
           </label>
 
           <div
