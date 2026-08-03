@@ -219,8 +219,8 @@ function hallToAuditorium(hall: InventoryHall): Auditorium {
     seatingWidth,
     seatLayout,
     sourceNote: seatLayout
-      ? `银幕规格与放映制式来自公开数据库；逐排座号和空槽来自猫眼选座网格抓取${capturedCountNote}；厅深按银幕宽度估算，第一排距银幕约 ${estimatedFrontDistance.toFixed(1)} m（范围 8–12 m），座间距、排距和高差仍为几何估算`
-      : `银幕规格、放映制式与容量来自公开数据库；该厅尚无逐排抓取数据，座位排列按容量近似；厅深按银幕宽度估算，第一排距银幕约 ${estimatedFrontDistance.toFixed(1)} m（范围 8–12 m），不代表影院官方测绘`,
+      ? `${hall.dataSourceId === "arvinting-20260801" ? "银幕规格、放映制式与容量已按 ArvinTing 数据表核对" : "银幕规格与放映制式由现有公开数据库补充"}；逐排座号和空槽来自猫眼选座网格抓取${capturedCountNote}；厅深按银幕宽度估算，第一排距银幕约 ${estimatedFrontDistance.toFixed(1)} m（范围 8–12 m），座间距、排距和高差仍为几何估算`
+      : `${hall.dataSourceId === "arvinting-20260801" ? "银幕规格、放映制式与容量已按 ArvinTing 数据表核对" : "银幕规格、放映制式与容量由现有公开数据库补充"}；该厅尚无逐排抓取数据，座位排列按容量近似；厅深按银幕宽度估算，第一排距银幕约 ${estimatedFrontDistance.toFixed(1)} m（范围 8–12 m），不代表影院官方测绘`,
   };
 }
 

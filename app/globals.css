@@ -847,6 +847,47 @@ button {
   white-space: nowrap;
 }
 
+.source-attribution {
+  margin: 12px 2px 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--subtle);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.source-attribution > span {
+  flex: 0 0 auto;
+}
+
+.source-attribution a {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  text-decoration-color: rgba(255, 255, 255, 0.24);
+  text-underline-offset: 3px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-attribution a:hover {
+  color: var(--text);
+  text-decoration-color: currentColor;
+}
+
+.source-attribution small {
+  flex: 0 0 auto;
+  color: var(--subtle);
+  font-size: inherit;
+}
+
+.source-attribution.is-compact {
+  margin-top: 10px;
+  padding: 0 2px;
+  font-size: 11px;
+}
+
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,

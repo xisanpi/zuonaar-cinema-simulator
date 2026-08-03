@@ -27,6 +27,7 @@ import {
   getSeatMetrics,
   type Seat,
 } from "./cinema-data";
+import { DataSourceAttribution } from "./data-source";
 
 const CinemaScene = dynamic(
   () => import("./CinemaScene").then((module) => module.CinemaScene),
@@ -432,6 +433,7 @@ export function CinemaExperience({
                 </small>
               </div>
             </section>
+            <DataSourceAttribution compact />
             </div>
 
             <div

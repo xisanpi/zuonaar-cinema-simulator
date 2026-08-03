@@ -25,6 +25,7 @@ import {
   matchesPinyinSearch,
   normalizeSearchValue,
 } from "./search-utils.mjs";
+import { DataSourceAttribution } from "./data-source";
 
 type FormatFilter = "all" | PremiumFormat;
 type SortMode = "screen" | "distance";
@@ -529,6 +530,8 @@ export function CinemaFinder() {
             ) : null}
           </div>
         </div>
+
+        <DataSourceAttribution />
 
         <div className="cinema-results">
           {results.length ? (

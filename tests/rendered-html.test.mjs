@@ -71,6 +71,9 @@ test("server-renders the cinema discovery page", async () => {
     /<option value="screen" selected="">银幕从大到小<\/option>/,
   );
   assert.match(html, /找到更适合你的电影院。/);
+  assert.match(html, /主要数据源/);
+  assert.match(html, /ArvinTing/);
+  assert.match(html, /全球 IMAX 及特效影厅分布/);
   assert.doesNotMatch(html, /先看视野，再决定坐哪儿。/);
   assert.doesNotMatch(html, /在坐下之前，先看清这块银幕。/);
   assert.doesNotMatch(html, /codex-preview/);
@@ -97,6 +100,8 @@ test("server-renders a selected auditorium simulator", async () => {
   assert.match(html, /影院视野模拟器/);
   assert.match(html, /中国电影博物馆/);
   assert.match(html, /幕面光学模型/);
+  assert.match(html, /主要数据源/);
+  assert.match(html, /ArvinTing/);
   assert.match(html, /IMAX Countdown/);
   assert.match(html, /aria-label="播放影片：IMAX Countdown"/);
   assert.match(html, /data-dbd-pattern="film-player"/);
@@ -133,8 +138,8 @@ test("multi-format cinemas default to IMAX and use the title as the switcher", a
   assert.match(html, /aria-label="切换影厅"/);
   assert.match(html, /data-dbd-pattern="auditorium-switcher"/);
   assert.match(html, /<option value="hall-0076" selected="">IMAX 厅<\/option>/);
-  assert.match(html, /25\.9/);
-  assert.match(html, /13\.5/);
+  assert.match(html, /24\.2/);
+  assert.match(html, /12\.7/);
 });
 
 test("labels captured seat layouts explicitly", async () => {

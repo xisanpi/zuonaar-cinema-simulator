@@ -18,6 +18,9 @@ export type InventoryHall = {
   latitude: number | null;
   longitude: number | null;
   sourceUrl: string;
+  dataSourceId?: string;
+  dataSourceSheet?: string;
+  dataSourceRow?: number;
   isPriority: boolean;
   priorityRank: number | null;
   priorityScore: number | null;

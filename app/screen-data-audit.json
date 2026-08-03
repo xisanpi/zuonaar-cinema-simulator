@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "scope": "上海 IMAX 影厅银幕尺寸",
-  "checkedAt": "2026-08-02",
-  "referenceSource": "用户提供的上海 IMAX 银幕尺寸清单；截图未附原始测量方法和发布链接",
+  "checkedAt": "2026-08-03",
+  "referenceSource": "ArvinTing《全球 IMAX 及特效影厅分布》2026-08-01 版本",
   "measurements": {
     "hall-0048": [19.126, 10.263],
     "hall-0049": [17.5, 9.555],
@@ -59,10 +59,10 @@
       ]
     },
     "hall-0076": {
-      "confidence": "high",
-      "status": "verified",
-      "label": "已核实",
-      "note": "新闻晨报·周到的开业报道明确公布 25.88 × 13.46 m，与站内值一致。对比清单应为另一测量口径。",
+      "confidence": "medium",
+      "status": "version_consistent",
+      "label": "主源已核对",
+      "note": "主数据源同时记录开业期 25.88 × 13.46 m 与后续 24.164 × 12.678 m 两组尺寸；站内按源表的最新一组采用，差异可能来自幕布更新或测量边界。",
       "sources": [
         "https://static.zhoudaosh.com/5DCD20D5B6D21B16CA02A14CD4395A4643AA8C65A1313BB421C6A7C16D1DFD72",
         "https://www.wanda.cn/2018/2018latest_0905/39180.html"
@@ -77,9 +77,9 @@
     },
     "hall-0082": {
       "confidence": "low",
-      "status": "conflict",
-      "label": "数据冲突",
-      "note": "站内值为 25.44 × 13.23 m（336.6 ㎡），对比清单为 23.286 × 12.3 m（286.4 ㎡）。开业期报道称银幕“接近 300 平方米”，更接近对比清单，但仍没有可独立确认的精确长宽。",
+      "status": "needs_review",
+      "label": "主源已采用",
+      "note": "主数据源记录历史 25.44 × 13.23 m 与最新 23.286 × 12.3 m 两组尺寸；站内按最新一组采用。开业期报道称银幕“接近 300 平方米”，但仍没有可独立确认的精确长宽。",
       "sources": [
         "https://www.sohu.com/a/212709329_487791"
       ]
